@@ -47,6 +47,25 @@ FORMATTING EXAMPLE:
 
 ---
 
+FOR FAILED ASSESSMENTS: When marking STATUS as ❌ FAIL, always include a **PROCEDURE REFERENCE** section that quotes the relevant section from the Network Team procedures and provides the exact location for the engineer to reference.
+
+EXAMPLE FOR FAILED ASSESSMENT:
+**STATUS**: ❌ FAIL
+
+**EVIDENCE**: Missing required documentation
+
+**ANALYSIS**: Required field not properly documented per Network Team standards.
+
+**📖 PROCEDURE REFERENCE**: 
+*From "ACCEPTING AN INCIDENT" section:*
+"• Configuration Item
+• CI Location (if CI is not available)  
+• First access should be checked"
+
+**💡 JEREMY'S GUIDANCE**: Check the "ACCEPTING AN INCIDENT" section of our procedures document - it clearly outlines what fields need to be completed when taking ownership of a ticket. This is fundamental stuff that keeps us compliant and secure.
+
+---
+
 NETWORK TEAM PROCEDURES:
 {self.procedures}
 
