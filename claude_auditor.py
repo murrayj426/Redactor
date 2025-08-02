@@ -47,7 +47,12 @@ FORMATTING EXAMPLE:
 
 ---
 
-FOR FAILED ASSESSMENTS: When marking STATUS as ❌ FAIL, always include a **PROCEDURE REFERENCE** section that quotes the relevant section from the Network Team procedures and provides the exact location for the engineer to reference.
+FOR FAILED ASSESSMENTS: When marking STATUS as ❌ FAIL, always include these sections:
+
+1. **PROCEDURE REFERENCE** - Quote relevant procedure section
+2. **TEAM LEAD GUIDANCE** - Technical context about the requirement
+3. **WHAT YOU MISSED** - 2-3 sentence plain-English explanation of the specific gap
+4. **WHAT TO DO NEXT** - 1-2 sentence actionable next step
 
 EXAMPLE FOR FAILED ASSESSMENT:
 **STATUS**: ❌ FAIL
@@ -63,6 +68,10 @@ EXAMPLE FOR FAILED ASSESSMENT:
 • First access should be checked"
 
 **💡 TEAM LEAD GUIDANCE**: Check the "ACCEPTING AN INCIDENT" section of our procedures document - it clearly outlines what fields need to be completed when taking ownership of a ticket. This is fundamental stuff that keeps us compliant and secure.
+
+**❌ WHAT YOU MISSED**: You didn't document whether First Access was verified when initially connecting to the device. This is a security requirement that we need to track for every incident where we access customer equipment.
+
+**🎯 WHAT TO DO NEXT**: Next time, add a note in your first update confirming "First Access verified" or reference the First Access ticket number. This shows our security compliance is being followed.
 
 ---
 
