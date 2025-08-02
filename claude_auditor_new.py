@@ -12,6 +12,7 @@ import anthropic
 # Import base auditor and optimization utilities
 from base_auditor import BaseAuditor
 from utils.error_handling import smart_error_handler, monitor_performance
+from utils.cache_utils import cached_ai_response
 from utils.ai_utils import optimize_prompt_for_model
 
 # Load environment variables
@@ -26,14 +27,15 @@ class ClaudeAuditor(BaseAuditor):
     
     @smart_error_handler(retry_count=3, delay=2.0)
     @monitor_performance
-    def audit_ticket(self, redacted_text, model="claude-3-5-sonnet-20241022"):
+    @cached_ai_response
+    def audit_ticket(self, ticket_text, model="claude-3-5-sonnet-20241022"):
         """Conduct audit using Claude 3.5 Sonnet's superior reasoning capabilities"""
         
         # Apply rate limiting
         self.rate_limiter.wait_if_needed(model, 50)  # Claude's rate limit
         
         # Optimize prompt for token limits
-        prompt = self.create_audit_prompt(redacted_text)
+        prompt = self.create_audit_prompt(ticket_text)
         optimization = optimize_prompt_for_model(prompt, model)
         
         if optimization['truncated']:
