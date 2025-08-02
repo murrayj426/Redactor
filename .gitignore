@@ -1,6 +1,10 @@
 # Environment variables
 .env
 
+# Cache directories
+cache/
+logs/
+
 # Python
 __pycache__/
 *.py[cod]

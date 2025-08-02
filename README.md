@@ -20,9 +20,7 @@ An intelligent PDF redaction and compliance auditing system with **smart busines
 - **Session state caching** in GUI eliminates reprocessing
 - **Response caching** stores AI audit results for repeat queries  
 - **Model optimization** suggests cheaper alternatives when rate limited
-- **Real-time performance metrics** in GUI sidebar AI-Powered PDF Redactor & Network Team Compliance Auditor
-
-An intelligent PDF redaction and compliance auditing system with **smart business term preservation** and **Claude 3.5 Sonnet AI auditing**. Built for Network Team compliance standards with personal team lead feedback.
+- **Real-time performance metrics** in GUI sidebar
 
 ## ✨ Key Features
 
