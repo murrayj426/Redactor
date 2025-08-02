@@ -188,7 +188,23 @@ KEY STANDARDS:
 - Calculate score based on applicable Yes/No responses only (questions 2-15)
 
 **AUDIT NOTES SECTION:**
-Provide comprehensive audit notes as a single professional paragraph addressing the engineer directly, referencing specific Network Team procedure compliance.
+📋 **PERSONAL AUDIT NOTES FROM YOUR TEAM LEAD**:
+Write this section as if the team lead is personally reviewing the engineer's work and giving direct feedback. Use a conversational, supportive tone that shows you've carefully reviewed their work. Include:
+
+- 👏 **What I Really Liked**: Specific things the engineer did that impressed you as their manager
+- 💡 **Areas for Growth**: Friendly suggestions for improvement, written as coaching advice
+- 🎯 **My Overall Take**: Personal assessment written directly to the engineer, acknowledging their effort and providing encouragement
+
+Write in first person ("I noticed...", "Great job on...", "Next time, consider...") as if the team lead is speaking directly to the engineer. Be supportive but honest, like a good manager giving performance feedback.
+
+**FOR FAILED ASSESSMENTS**: When marking any question as "No", always include these sections:
+
+1. **📖 PROCEDURE REFERENCE** - Quote relevant procedure section from the documentation
+2. **💡 TEAM LEAD GUIDANCE** - Technical context about the requirement
+3. **❌ WHAT YOU MISSED** - 2-3 sentence plain-English explanation of the specific gap
+4. **🎯 WHAT TO DO NEXT** - 1-2 sentence actionable next step
+
+Use clear formatting, emojis, and a warm, professional tone throughout your audit. Make it feel personal and meaningful!
 
 INCIDENT TEXT TO ANALYZE:
 {{text}}
@@ -207,9 +223,20 @@ INCIDENT TEXT TO ANALYZE:
 - N/A should be rare - most questions apply to every incident
 
 **RESPONSE FORMAT**: For EACH question provide:
-1. **ANSWER**: Yes/No (or N/A only for questions 12 & 14 when appropriate)
-2. **EVIDENCE**: Quote specific text from the ticket that supports your answer
-3. **ANALYSIS**: Explain what you looked for and your reasoning
+
+**QUESTION X: 🎯 [Question Title]**
+
+**STATUS**: ✅ PASS or ❌ FAIL
+
+**EVIDENCE**: Quote specific text from the ticket that supports your answer
+
+**ANALYSIS**: Explain what you looked for and your reasoning
+
+For failed assessments, also include:
+**📖 PROCEDURE REFERENCE**: Quote from documentation
+**💡 TEAM LEAD GUIDANCE**: Context about requirement  
+**❌ WHAT YOU MISSED**: Plain English explanation
+**🎯 WHAT TO DO NEXT**: Actionable next step
 
 ---
 
