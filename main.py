@@ -3,6 +3,25 @@ import argparse
 from pdf_parser import extract_text_from_pdf, run_redactor_gui
 from openai_auditor import TicketAuditor
 
+# Import optimization utilities
+from utils.config import get_config, validate_config
+from utils.error_handling import setup_logging
+
+# Setup logging and configuration
+setup_logging(level="INFO")
+config = get_config()
+validation_result = validate_config()
+
+if not validation_result['valid']:
+    print("⚠️ Configuration Issues Found:")
+    for issue in validation_result['issues']:
+        print(f"  ❌ {issue}")
+
+if validation_result['warnings']:
+    print("💡 Configuration Warnings:")
+    for warning in validation_result['warnings']:
+        print(f"  ⚠️ {warning}")
+
 def redact_pdf_to_text(file_path):
     redacted_text, redaction_stats = extract_text_from_pdf(file_path)
     
@@ -43,7 +62,7 @@ def audit_pdf(file_path, audit_type="general", model="gpt-4"):
     # Run AI audit
     print(f"Running {audit_type} audit with {model}...")
     auditor = TicketAuditor()
-    audit_result = auditor.audit_ticket(redacted_text, audit_type, model)
+    audit_result = auditor.audit_ticket(redacted_text, model=model)
     
     # Save audit report
     report_file = auditor.save_audit_report(audit_result, f"{audit_type}_audit")

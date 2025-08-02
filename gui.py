@@ -5,11 +5,44 @@ from claude_auditor import ClaudeAuditor
 import os
 from dotenv import load_dotenv
 
+# Import optimization utilities
+from utils.config import get_config, validate_config
+from utils.error_handling import setup_logging, get_performance_report
+
 # Load environment variables at startup
 load_dotenv()
 
+# Setup configuration and logging
+config = get_config()
+validation_result = validate_config()
+setup_logging(level="INFO", log_file="logs/app.log" if not validation_result['issues'] else None)
+
 st.set_page_config(page_title="PDF Redactor & Network Team Auditor", layout="wide")
 st.title("📄 Incident PDF Redactor & Network Team AI Auditor")
+
+# Configuration validation sidebar
+with st.sidebar:
+    st.header("🔧 System Status")
+    
+    if validation_result['valid']:
+        st.success("✅ Configuration Valid")
+    else:
+        st.error("❌ Configuration Issues")
+        for issue in validation_result['issues']:
+            st.error(f"• {issue}")
+    
+    if validation_result['warnings']:
+        st.warning("⚠️ Warnings")
+        for warning in validation_result['warnings']:
+            st.warning(f"• {warning}")
+    
+    # Performance monitoring
+    if st.button("📊 Performance Report"):
+        perf_report = get_performance_report()
+        if perf_report:
+            st.json(perf_report)
+        else:
+            st.info("No performance data yet")
 
 st.markdown("---")
 st.header("🤖 Configuration")
@@ -104,19 +137,42 @@ st.divider()
 
 # File upload section
 st.header("📄 Document Processing")
+
+# Initialize session state for better performance
+if 'redacted_text' not in st.session_state:
+    st.session_state.redacted_text = None
+if 'redaction_stats' not in st.session_state:
+    st.session_state.redaction_stats = None
+if 'audit_result' not in st.session_state:
+    st.session_state.audit_result = None
+
 uploaded_file = st.file_uploader("Upload an Incident PDF", type="pdf")
 
 if uploaded_file is not None:
-    with st.spinner("Processing PDF and applying redaction..."):
-        # Save uploaded file temporarily
-        with open("temp_uploaded.pdf", "wb") as f:
-            f.write(uploaded_file.getbuffer())
+    # Check if we need to reprocess (file changed)
+    file_hash = hash(uploaded_file.getbuffer())
+    if 'file_hash' not in st.session_state or st.session_state.file_hash != file_hash:
         
-        # Extract and redact text
-        redacted_text, redaction_stats = extract_text_from_pdf("temp_uploaded.pdf")
-        
-        # Clean up temp file
-        os.remove("temp_uploaded.pdf")
+        with st.spinner("Processing PDF and applying redaction..."):
+            # Save uploaded file temporarily
+            with open("temp_uploaded.pdf", "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            
+            # Extract and redact text
+            redacted_text, redaction_stats = extract_text_from_pdf("temp_uploaded.pdf")
+            
+            # Store in session state
+            st.session_state.redacted_text = redacted_text
+            st.session_state.redaction_stats = redaction_stats
+            st.session_state.file_hash = file_hash
+            st.session_state.audit_result = None  # Reset audit when file changes
+            
+            # Clean up temp file
+            os.remove("temp_uploaded.pdf")
+    
+    # Use cached results
+    redacted_text = st.session_state.redacted_text
+    redaction_stats = st.session_state.redaction_stats
     
     # Display redaction results
     st.success("✅ Document successfully redacted!")

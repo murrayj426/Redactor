@@ -4,12 +4,21 @@ from dotenv import load_dotenv
 import json
 from datetime import datetime
 
+# Import optimization utilities
+from utils.error_handling import smart_error_handler, monitor_performance
+from utils.cache_utils import cached_ai_response, load_network_procedures
+from utils.ai_utils import optimize_prompt_for_model, RateLimiter
+
 # Load environment variables
 load_dotenv()
 
 class TicketAuditor:
     def __init__(self):
         self.client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        self.rate_limiter = RateLimiter()
+        
+        # Load incident documentation with caching
+        self.incident_documentation = load_network_procedures()
         
     def load_incident_documentation(self):
         """Load incident handling documentation if available"""
@@ -342,109 +351,39 @@ INCIDENT TEXT TO ANALYZE:
 
         return audit_questions.format(text=redacted_text)
     
+    @smart_error_handler(retry_count=3, delay=2.0)
+    @monitor_performance
+    @cached_ai_response
     def audit_ticket(self, redacted_text, model="gpt-4o-mini", retry_delay=60):
         """Send redacted text to OpenAI for auditing using Network Team standards"""
-        import time
         
-        try:
-            # Smart truncation - keep key sections for auditing
-            original_length = len(redacted_text)
-            if original_length > 25000:  # Even higher limit for very large documents
-                # Try to preserve important sections for auditing
-                lines = redacted_text.split('\n')
-                
-                # Look for key audit-relevant sections with better filtering
-                important_lines = []
-                current_section = []
-                
-                for line in lines:
-                    line_lower = line.lower().strip()
-                    # Enhanced keywords for better audit content detection
-                    if any(keyword in line_lower for keyword in [
-                        'incident', 'inc', 'ticket', 'assigned', 'priority', 'status',
-                        'first access', 'pending', 'event date', 'time worked', 'close',
-                        'resolution', 'customer', 'client', 'update', 'comment', 'work notes',
-                        'troubleshoot', 'investigation', 'root cause', 'configuration', 'ci',
-                        'service offering', 'category', 'sub-category', 'impact', 'urgency',
-                        'template', 'acknowledgment', 'ownership', 'communication', 'email',
-                        'phone', 'webex', 'change', 'activity', 'task', 'escalation',
-                        'close notes', 'resolution notes', 'observations', 'issue description',
-                        'rma', 'health check', 'vpn', 'dns', 'cpu', 'memory', 'screenshots',
-                        'deployed', 'reachable', 'utilization', 'successfully', 'performed'
-                    ]) or line.startswith(('•', '-', '*')) or ':' in line:
-                        # Add some context lines before important content
-                        important_lines.extend(current_section[-1:])  # Keep 1 line of context
-                        important_lines.append(line)
-                        current_section = []
-                    else:
-                        current_section.append(line)
-                        if len(current_section) > 5:  # Don't keep too much irrelevant content
-                            current_section = current_section[-2:]
-                
-                # If we got good content, use it; otherwise fall back to strategic truncation
-                if len(important_lines) > 100:  # We found substantial relevant content
-                    smart_text = '\n'.join(important_lines)
-                    if len(smart_text) > 25000:
-                        redacted_text = smart_text[:25000] + "\n\n[TRUNCATED - Showing audit-relevant sections]"
-                    else:
-                        redacted_text = smart_text + "\n\n[SMART EXTRACTION - Key audit sections preserved]"
-                    print(f"🎯 Smart extraction: Reduced from {original_length:,} to {len(redacted_text):,} chars while preserving audit content")
-                else:
-                    # Strategic truncation: keep beginning, middle sample, and end
-                    start_text = redacted_text[:10000]
-                    middle_start = len(redacted_text) // 2 - 2500
-                    middle_text = redacted_text[middle_start:middle_start + 5000]
-                    end_text = redacted_text[-10000:]
-                    redacted_text = (start_text + 
-                                   f"\n\n[MIDDLE SECTION SAMPLE - {middle_start:,} to {middle_start+5000:,} chars]\n\n" + 
-                                   middle_text +
-                                   f"\n\n[FINAL SECTION - Last 10,000 chars]\n\n" + 
-                                   end_text)
-                    print(f"📄 Strategic truncation: Preserved beginning, middle sample, and end from {original_length:,} chars")
-            else:
-                print(f"📝 Document size OK: {original_length:,} characters, no truncation needed")
-            
-            prompt = self.create_audit_prompt(redacted_text)
-            
-            # Try the requested model first
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    response = self.client.chat.completions.create(
-                        model=model,
-                        messages=[
-                            {"role": "system", "content": "You are a Network Team incident auditor. Provide concise, structured audit responses."},
-                            {"role": "user", "content": prompt}
-                        ],
-                        max_tokens=1500,
-                        temperature=0.3
-                    )
-                    return response.choices[0].message.content
-                
-                except Exception as e:
-                    if "rate_limit_exceeded" in str(e) or "tokens" in str(e):
-                        if attempt < max_retries - 1:
-                            print(f"Rate limit hit, waiting {retry_delay} seconds before retry {attempt + 1}/{max_retries}...")
-                            time.sleep(retry_delay)
-                            continue
-                        else:
-                            # Final fallback to GPT-3.5-turbo
-                            print("Max retries reached, falling back to GPT-3.5-turbo...")
-                            response = self.client.chat.completions.create(
-                                model="gpt-3.5-turbo",
-                                messages=[
-                                    {"role": "system", "content": "You are a Network Team incident auditor. Provide concise, structured audit responses."},
-                                    {"role": "user", "content": prompt}
-                                ],
-                                max_tokens=1500,
-                                temperature=0.3
-                            )
-                            return response.choices[0].message.content
-                    else:
-                        raise e
-            
-        except Exception as e:
-            return f"Error during audit: {str(e)}"
+        # Apply rate limiting
+        model_rates = {'gpt-4': 10, 'gpt-4o-mini': 500, 'gpt-3.5-turbo': 3500}
+        rpm_limit = model_rates.get(model, 10)
+        self.rate_limiter.wait_if_needed(model, rpm_limit)
+        
+        # Optimize prompt for token limits
+        prompt = self.create_audit_prompt(redacted_text)
+        optimization = optimize_prompt_for_model(prompt, model)
+        
+        if optimization['truncated']:
+            print(f"⚠️ Prompt truncated for {model}: {optimization['reason']}")
+            prompt = optimization['optimized_prompt']
+        elif optimization['model_suggestion'] != model:
+            print(f"💡 Suggesting {optimization['model_suggestion']} instead of {model} for better performance")
+            model = optimization['model_suggestion']
+        
+        response = self.client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are a Network Team incident auditor. Provide concise, structured audit responses."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1500,
+            temperature=0.3
+        )
+        
+        return response.choices[0].message.content
     
     def save_audit_report(self, audit_result, filename_prefix="audit"):
         """Save audit report to file with structured format"""

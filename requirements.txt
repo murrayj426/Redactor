@@ -4,3 +4,10 @@ pyperclip
 openai
 anthropic
 python-dotenv
+
+# Performance and optimization
+tiktoken>=0.5.0
+cachetools>=5.0.0
+
+# Error handling and monitoring
+requests>=2.28.0

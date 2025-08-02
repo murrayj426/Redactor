@@ -9,6 +9,11 @@ from datetime import datetime
 from dotenv import load_dotenv
 import anthropic
 
+# Import optimization utilities
+from utils.error_handling import smart_error_handler, monitor_performance
+from utils.cache_utils import cached_ai_response, load_network_procedures
+from utils.ai_utils import optimize_prompt_for_model, RateLimiter
+
 # Load environment variables
 load_dotenv()
 
@@ -17,13 +22,10 @@ class ClaudeAuditor:
         self.client = anthropic.Anthropic(
             api_key=os.getenv('ANTHROPIC_API_KEY')
         )
+        self.rate_limiter = RateLimiter()
         
-        # Load Network Team procedures
-        try:
-            with open('incident_handling_procedures.txt', 'r') as f:
-                self.procedures = f.read()
-        except FileNotFoundError:
-            self.procedures = "Network Team procedures file not found."
+        # Load Network Team procedures with caching
+        self.procedures = load_network_procedures()
     
     def create_audit_prompt(self, ticket_text, audit_type="general"):
         """Create structured audit prompt optimized for Claude's reasoning capabilities"""
@@ -157,28 +159,36 @@ Use clear formatting, emojis, and a warm, professional tone throughout your audi
 
         return prompt
     
+    @smart_error_handler(retry_count=3, delay=2.0)
+    @monitor_performance
+    @cached_ai_response
     def audit_ticket(self, ticket_text, audit_type="general", model="claude-3-5-sonnet-20241022"):
         """Conduct audit using Claude 3.5 Sonnet's superior reasoning capabilities"""
         
-        try:
-            prompt = self.create_audit_prompt(ticket_text, audit_type)
-            
-            response = self.client.messages.create(
-                model=model,
-                max_tokens=4000,
-                temperature=0.1,  # Low temperature for consistent compliance analysis
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
-            )
-            
-            return response.content[0].text
-            
-        except Exception as e:
-            return f"Error during Claude audit: {str(e)}\n\nPlease check your ANTHROPIC_API_KEY in the .env file."
+        # Apply rate limiting
+        self.rate_limiter.wait_if_needed(model, 50)  # Claude's rate limit
+        
+        # Optimize prompt for token limits
+        prompt = self.create_audit_prompt(ticket_text, audit_type)
+        optimization = optimize_prompt_for_model(prompt, model)
+        
+        if optimization['truncated']:
+            print(f"⚠️ Prompt truncated for Claude: {optimization['reason']}")
+            prompt = optimization['optimized_prompt']
+        
+        response = self.client.messages.create(
+            model=model,
+            max_tokens=4000,
+            temperature=0.1,  # Low temperature for consistent compliance analysis
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        
+        return response.content[0].text
     
     def save_audit_report(self, audit_result, audit_type="general"):
         """Save audit report with timestamp"""
