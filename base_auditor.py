@@ -54,9 +54,10 @@ class BaseAuditor(ABC):
 
 **CRITICAL INSTRUCTIONS**:
 - Question 1: Simply identify and display the INC number (not a compliance check)
-- Only use N/A for questions 12 and 14 when truly not applicable
-- Questions 2-11, 13, and 15 should ALWAYS be answered Yes or No
-- If you cannot find evidence, answer "No" and explain what's missing
+- Only use N/A for questions 12 and 15 when truly not applicable
+- Questions 2-12, 14 should ALWAYS be answered PASS or FAIL
+- Question 15: Can be N/A only if incident is still open/not resolved
+- If you cannot find evidence, answer "FAIL" and explain what's missing
 - N/A should be rare - most questions apply to every incident
 - **Accept common abbreviations**: "Client H." = "Client Hold", "CAR" = "Client Action Required", etc.
 - **Be reasonable with formats**: Minor variations in wording/format should not automatically fail compliance
@@ -70,13 +71,13 @@ class BaseAuditor(ABC):
 
 **RESPONSE FORMAT**: 
 - **Question 1**: Simply display the INC number found
-- **Questions 2-15**: For EACH question provide:
+- **Questions 2-16**: For EACH question provide:
 
 ---
 
 **QUESTION [NUMBER]: [REPEAT THE FULL QUESTION TEXT]**
 
-**STATUS**: ✅ PASS or ❌ FAIL (or ⚠️ N/A only for questions 12 & 14 when appropriate)
+**STATUS**: ✅ PASS or ❌ FAIL (or ⚠️ N/A only for questions 12 & 15 when appropriate)
 
 **EVIDENCE**: Quote specific text from the ticket that supports your answer
 
@@ -159,30 +160,37 @@ CRITICAL: Use proper line breaks and spacing. Add a blank line after each sectio
 **Answer Required**: ✅ PASS / ❌ FAIL / ⚠️ N/A (N/A only if no tasks/changes were needed for this incident type)
 **Network Team Standard**: Proper Activity and Change task creation when required
 
-**13. Time Tracking Accuracy**
-**Question**: Is Time Worked accurately documented for cost tracking?
+**13. Activity & Change Task Deficiencies**
+**Question**: Document any deficiencies found in Activity & Change task management
+**Answer Required**: Text response (not scored - documentation only)
+**Network Team Standard**: Provide detailed explanation of any task management issues identified
+
+**14. Time Tracking Accuracy**
+**Question**: Did the engineer accurately document their Time Worked entries?
 **Answer Required**: ✅ PASS / ❌ FAIL (N/A not allowed)
 **Network Team Standard**: Time Worked field must be populated accurately for cost evaluation
 
-**14. Resolution Documentation**
-**Question**: Do Close Notes reflect work done with evidence of resolution?
+**15. Resolution Documentation**
+**Question**: Do the 'Close Notes' accurately reflect the work that was done and provide evidence of resolution?
 **Answer Required**: ✅ PASS / ❌ FAIL / ⚠️ N/A (N/A only if incident is still open/not resolved)
 **Network Team Standard**: Close notes should include issue summary, steps taken, and resolution evidence
 
-**15. Overall Performance Assessment**
-**Question**: Rate overall engineer performance on this incident (1-10 scale)
-**Answer Required**: ✅ PASS with 1-10 score (N/A not allowed)
-**Network Team Standard**: Overall compliance with Network Team incident management procedures
+**16. Audit Notes**
+**Question**: Share your thoughts on the overall performance of the audited engineer for this incident
+**Answer Required**: Text response (not scored - documentation only)
+**Network Team Standard**: Provide constructive feedback and identify areas for improvement or recognition
 
 ---
 
 **SCORING RULES:**
 - Question 1: Display INC number (not scored)
-- Questions 2-11, 13, 15: MUST use ✅ PASS or ❌ FAIL based on Network Team standards
-- Question 12: ⚠️ N/A only if no Activity/Change tasks were required
-- Question 14: ⚠️ N/A only if incident is still open
+- Questions 2-12: MUST use ✅ PASS or ❌ FAIL based on Network Team standards (11 questions)
+- Question 13: Text response only (not scored - documentation)
+- Question 14: ✅ PASS / ❌ FAIL (Time Worked accuracy)
+- Question 15: ✅ PASS / ❌ FAIL / ⚠️ N/A (Close Notes - N/A only if incident still open)
+- Question 16: Text response only (not scored - audit notes)
 - If evidence is missing, use ❌ FAIL and explain what should be there per Network Team procedures
-- Calculate score based on applicable PASS/FAIL responses only (questions 2-15)
+- **Total scoreable questions: 13 maximum (Q2-12, Q14, Q15)**
 
 **AUDIT NOTES SECTION:**
 
@@ -231,7 +239,7 @@ INCIDENT TEXT TO ANALYZE:
         os.makedirs("reports", exist_ok=True)
         
         with open(filename, "w") as f:
-            f.write(f"=== INCIDENT AUDIT REPORT (15-QUESTION FRAMEWORK) ===\n")
+            f.write(f"=== INCIDENT AUDIT REPORT (16-QUESTION FRAMEWORK) ===\n")
             f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Audit Type: {filename_prefix.replace('_audit', '').upper()}\n")
             f.write(f"{'='*60}\n\n")
@@ -244,38 +252,37 @@ INCIDENT TEXT TO ANALYZE:
     def create_audit_summary(self, audit_result):
         """Extract key metrics from audit result for dashboard with proper N/A handling"""
         try:
-            # Simple parsing to extract scores (this could be enhanced)
+            # Count PASS/FAIL responses only - no more 1-10 scoring
             lines = audit_result.split('\n')
-            scores = []
+            pass_count = 0
+            fail_count = 0
             na_count = 0
-            overall_score = None
             
             for line in lines:
-                # Count N/A responses (should not affect scoring)
-                if 'N/A' in line and any(q in line for q in ['12.', '14.', 'Tasks', 'Close Notes']):
-                    na_count += 1
-                elif 'score' in line.lower() or '/10' in line:
-                    # Extract numerical scores only for applicable questions
-                    import re
-                    score_match = re.search(r'(\d+(?:\.\d+)?)/10', line)
-                    if score_match and 'N/A' not in line:
-                        scores.append(float(score_match.group(1)))
-                elif 'overall' in line.lower() and '/10' in line:
-                    score_match = re.search(r'(\d+(?:\.\d+)?)/10', line)
-                    if score_match:
-                        overall_score = float(score_match.group(1))
+                if '⚠️' in line and 'N/A' in line:
+                    # Check if this is Q12 (Task Management) or Q15 (Close Notes) - the only questions that can be N/A
+                    if any(q in line for q in ['12', '15', 'Task Management', 'Close Notes', 'Resolution Documentation']):
+                        na_count += 1
+                elif '✅' in line and 'PASS' in line:
+                    pass_count += 1
+                elif '❌' in line and 'FAIL' in line:
+                    fail_count += 1
             
-            # Calculate percentage based on applicable questions only
-            total_applicable = 15 - na_count
+            # Based on actual audit form: Q2-12 (11 questions), Q14, Q15 (2 questions) = 13 total scoreable
+            # Q1, Q13, Q16 are not scored (identification/text fields)
+            total_scoreable = 13  # Questions 2-12, 14, 15
+            total_applicable = total_scoreable - na_count
+            total_answered = pass_count + fail_count
             
             return {
-                'individual_scores': scores,
-                'average_score': sum(scores)/len(scores) if scores else None,
-                'overall_score': overall_score,
-                'total_questions': 15,
-                'applicable_questions': total_applicable,
+                'pass_count': pass_count,
+                'fail_count': fail_count,
+                'total_answered': total_answered,
+                'total_questions': 16,  # Total framework questions
+                'scoreable_questions': total_scoreable,  # Questions 2-12, 14, 15
+                'applicable_questions': total_applicable,  # Scoreable minus N/A
                 'na_responses': na_count,
-                'compliance_percentage': (len([s for s in scores if s >= 7]) / len(scores) * 100) if scores else None
+                'compliance_percentage': (pass_count / total_answered * 100) if total_answered > 0 else None
             }
         except:
             return None
@@ -286,6 +293,7 @@ INCIDENT TEXT TO ANALYZE:
         
         # Patterns for modern audit format with emojis
         pass_patterns = [
+            r'✅\s*PASS\s*\(Score:\s*(\d+)/(\d+)\)',  # "✅ PASS (Score: 9/10)"
             r'✅\s*PASS',
             r'STATUS.*?✅.*?PASS', 
             r'PASS.*?✅',
@@ -293,6 +301,7 @@ INCIDENT TEXT TO ANALYZE:
         ]
         
         fail_patterns = [
+            r'❌\s*FAIL\s*\(Score:\s*(\d+)/(\d+)\)',  # "❌ FAIL (Score: 2/10)"
             r'❌\s*FAIL',
             r'STATUS.*?❌.*?FAIL',
             r'FAIL.*?❌', 
@@ -301,24 +310,67 @@ INCIDENT TEXT TO ANALYZE:
         
         pass_count = 0
         fail_count = 0
+        extracted_scores = []
         
         # Try multiple patterns to catch all variations
         for pattern in pass_patterns:
             matches = re.findall(pattern, audit_text, re.IGNORECASE | re.DOTALL)
             if matches:
-                pass_count = max(pass_count, len(matches))
+                if isinstance(matches[0], tuple) and len(matches[0]) == 2:
+                    # Pattern captured score (numerator, denominator)
+                    for match in matches:
+                        extracted_scores.append((int(match[0]), int(match[1])))
+                    pass_count = len(matches)
+                else:
+                    # Simple PASS pattern
+                    pass_count = max(pass_count, len(matches))
         
         for pattern in fail_patterns:
             matches = re.findall(pattern, audit_text, re.IGNORECASE | re.DOTALL)
             if matches:
-                fail_count = max(fail_count, len(matches))
+                if isinstance(matches[0], tuple) and len(matches[0]) == 2:
+                    # Pattern captured score (numerator, denominator)
+                    for match in matches:
+                        extracted_scores.append((int(match[0]), int(match[1])))
+                    fail_count = len(matches)
+                else:
+                    # Simple FAIL pattern
+                    fail_count = max(fail_count, len(matches))
         
-        # Count total questions for verification
+        # Count total questions for verification (should be 16 total, Q2-12,14,15 are scored)
         question_count = len(re.findall(r'\*\*QUESTION\s+\d+', audit_text, re.IGNORECASE))
         
-        # Look for traditional score patterns first
+        # If we found PASS/FAIL counts, use them (this is the primary scoring method)
+        if pass_count > 0 or fail_count > 0:
+            total = pass_count + fail_count
+            pct = round((pass_count/total) * 100) if total > 0 else 0
+            
+            # Note: Based on actual audit form structure:
+            # Q1: INC# (not scored), Q2-12: Yes/No (11 questions), Q13: Text field (not scored)
+            # Q14: Yes/No/N/A, Q15: Yes/No/N/A, Q16: Audit notes (not scored)  
+            # Total scoreable: Q2-12, Q14, Q15 = 13 questions maximum
+            max_scoreable = 13  # Questions 2-12, 14, 15
+            
+            if total == max_scoreable:
+                debug_info = ""  # Clean display for full audit
+            else:
+                debug_info = f" ({total}/13)"
+            
+            return f"{pass_count}/{total} ({pct}%){debug_info}"
+        
+        # If we extracted individual scores from PASS/FAIL patterns, use them
+        if extracted_scores:
+            # Sum up all individual scores
+            total_score = sum(score[0] for score in extracted_scores)
+            total_possible = sum(score[1] for score in extracted_scores)
+            pct = round((total_score/total_possible) * 100) if total_possible > 0 else 0
+            return f"{total_score}/{total_possible} ({pct}%)"
+        
+        # Look for traditional score patterns as fallback
         score_patterns = [
             r'(\d+)/(\d+)\s*\((\d+)%\)',  # "11/12 (92%)"
+            r'\(Score:\s*(\d+)/(\d+)\)',   # "(Score: 9/10)"
+            r'Score:\s*(\d+)/(\d+)',      # "Score: 9/10"
             r'TOTAL.*?(\d+)/(\d+)',       # "TOTAL: 11/12"
             r'SCORE.*?(\d+)/(\d+)',       # "SCORE: 11/12"
             r'(\d+)\s*out\s*of\s*(\d+)',  # "11 out of 15"
@@ -337,15 +389,5 @@ INCIDENT TEXT TO ANALYZE:
                         return f"{num}/{den} ({pct}%)"
                     except (ValueError, ZeroDivisionError):
                         return f"{match[0]}/{match[1]}"
-        
-        # If we found PASS/FAIL counts, use them
-        if pass_count > 0 or fail_count > 0:
-            total = pass_count + fail_count
-            pct = round((pass_count/total) * 100) if total > 0 else 0
-            
-            # Debug info - shows question count if different from total
-            debug_info = f" (Found {question_count} questions)" if question_count != total else ""
-            
-            return f"{pass_count}/{total} ({pct}%){debug_info}"
         
         return "Score not available"
