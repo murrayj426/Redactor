@@ -157,7 +157,7 @@ if uploaded_file is not None:
         - ✅ **15-Question Compliance Framework** based on official Network Team procedures
         - 🔍 **Evidence-Based Analysis** with specific quotes and citations
         - 📊 **Performance Scoring** (1-10 scale) with detailed justification
-        - 📝 **Personal Audit Notes from Jeremy** - Direct manager feedback to engineers
+        - 📝 **Personal Audit Notes from Team Lead** - Direct manager feedback to engineers
         """)
     else:  # Claude (default)
         st.markdown("""

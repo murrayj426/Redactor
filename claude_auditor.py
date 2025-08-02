@@ -62,7 +62,7 @@ EXAMPLE FOR FAILED ASSESSMENT:
 • CI Location (if CI is not available)  
 • First access should be checked"
 
-**💡 JEREMY'S GUIDANCE**: Check the "ACCEPTING AN INCIDENT" section of our procedures document - it clearly outlines what fields need to be completed when taking ownership of a ticket. This is fundamental stuff that keeps us compliant and secure.
+**💡 TEAM LEAD GUIDANCE**: Check the "ACCEPTING AN INCIDENT" section of our procedures document - it clearly outlines what fields need to be completed when taking ownership of a ticket. This is fundamental stuff that keeps us compliant and secure.
 
 ---
 
@@ -135,14 +135,14 @@ Assess closure documentation quality and resolution evidence (if applicable).
 **QUESTION 15: 🎯 Rate overall engineer performance on this incident (1-10 scale)**
 Provide numerical rating with detailed justification based on compliance and execution quality.
 
-📋 **PERSONAL AUDIT NOTES FROM JEREMY**:
-Write this section as if Jeremy (the team lead) is personally reviewing the engineer's work and giving direct feedback. Use a conversational, supportive tone that shows you've carefully reviewed their work. Include:
+📋 **PERSONAL AUDIT NOTES FROM YOUR TEAM LEAD**:
+Write this section as if the team lead is personally reviewing the engineer's work and giving direct feedback. Use a conversational, supportive tone that shows you've carefully reviewed their work. Include:
 
 - 👏 **What I Really Liked**: Specific things the engineer did that impressed you as their manager
 - � **Areas for Growth**: Friendly suggestions for improvement, written as coaching advice
 - 🎯 **My Overall Take**: Personal assessment written directly to the engineer, acknowledging their effort and providing encouragement
 
-Write in first person ("I noticed...", "Great job on...", "Next time, consider...") as if Jeremy is speaking directly to the engineer. Be supportive but honest, like a good manager giving performance feedback.
+Write in first person ("I noticed...", "Great job on...", "Next time, consider...") as if the team lead is speaking directly to the engineer. Be supportive but honest, like a good manager giving performance feedback.
 
 Use clear formatting, emojis, and a warm, professional tone throughout your audit. Make it feel personal and meaningful!"""
 
