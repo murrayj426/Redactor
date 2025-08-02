@@ -116,13 +116,16 @@ Assess closure documentation quality and resolution evidence (if applicable).
 **QUESTION 15: 🎯 Rate overall engineer performance on this incident (1-10 scale)**
 Provide numerical rating with detailed justification based on compliance and execution quality.
 
-📋 **AUDIT NOTES SECTION**:
-Provide a comprehensive summary with:
-- 🎉 **Strengths**: What the engineer did well
-- 🔧 **Improvements**: Areas for growth
-- 📈 **Overall Assessment**: Professional summary with engineer name
+📋 **PERSONAL AUDIT NOTES FROM JEREMY**:
+Write this section as if Jeremy (the team lead) is personally reviewing the engineer's work and giving direct feedback. Use a conversational, supportive tone that shows you've carefully reviewed their work. Include:
 
-Use clear formatting, emojis, and friendly language throughout your audit. Make it engaging and easy to read!"""
+- 👏 **What I Really Liked**: Specific things the engineer did that impressed you as their manager
+- � **Areas for Growth**: Friendly suggestions for improvement, written as coaching advice
+- 🎯 **My Overall Take**: Personal assessment written directly to the engineer, acknowledging their effort and providing encouragement
+
+Write in first person ("I noticed...", "Great job on...", "Next time, consider...") as if Jeremy is speaking directly to the engineer. Be supportive but honest, like a good manager giving performance feedback.
+
+Use clear formatting, emojis, and a warm, professional tone throughout your audit. Make it feel personal and meaningful!"""
 
         return prompt
     
