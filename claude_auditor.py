@@ -52,7 +52,31 @@ class ClaudeAuditor(BaseAuditor):
             ]
         )
         
-        return response.content[0].text
+        # Log the entire response and its attributes for debugging
+        print("Claude API Full Response:", response)
+        print("Response Attributes:", dir(response))
+        
+        # Ensure response logging is visible
+        print("DEBUG: audit_ticket method called with prompt:", prompt)
+        print("DEBUG: Claude API response:", response)
+        
+        # Log the type of the content objects for debugging
+        print("DEBUG: Type of response.content[0]:", type(response.content[0]))
+        print("DEBUG: Attributes of response.content[0]:", dir(response.content[0]))
+
+        # Extract and process the text attribute from the response
+        audit_results = []
+        if response.content:
+            for block in response.content:
+                if isinstance(block, anthropic.types.text_block.TextBlock) and hasattr(block, 'text'):
+                    audit_results.append(block.text)
+                else:
+                    print(f"⚠️ Skipping non-TextBlock or missing 'text' attribute in block: {block}")
+
+        if audit_results:
+            return "\n\n".join(audit_results)
+        else:
+            raise ValueError("Unexpected response structure: No valid text blocks found")
 
 # Test function for command line usage
 def main():

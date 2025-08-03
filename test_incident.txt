@@ -1,0 +1,57 @@
+INC0123456 - Network Connectivity Issue
+
+Configuration Item: PRNFSPA-TowerFW01
+Location: PR-Niagara F. Tower
+Service Offering: Network Services
+Category: Security Device Management
+Priority: 3 - Moderate
+State: In Progress
+Assigned to: John Smith
+
+Event Date: 2025-01-15 14:30:00
+Next Follow-up: 2025-01-16 10:00:00
+
+Initial Report:
+Customer reports intermittent connectivity issues with their firewall device. Users experiencing slow response times and occasional timeouts when accessing internal resources.
+
+Engineer Updates:
+
+2025-01-15 14:45:00 - John Smith
+Hello, I've taken ownership of this incident. Based on the ticket information, you're experiencing intermittent connectivity issues with your firewall device PRNFSPA-TowerFW01 located at PR-Niagara F. Tower. I understand users are seeing slow response times and timeouts when accessing internal resources. I will begin investigating this issue immediately.
+
+First Access verified - connecting to device now.
+
+2025-01-15 15:15:00 - John Smith
+Initial troubleshooting completed:
+- Pinged device successfully from management network
+- SSH connection established 
+- Checked interface status - all interfaces up
+- CPU utilization at 25%, memory at 40%
+- No error messages in system logs for past 24 hours
+
+Setting pending code to Internal for further analysis of traffic patterns.
+
+Current Status: Investigating potential network congestion
+Next Steps: Will analyze traffic logs and check for any configuration changes in past week
+
+Pending: Internal
+Time Worked: 1.5 hours
+
+2025-01-16 09:30:00 - John Smith
+Follow-up analysis completed:
+- Reviewed traffic logs - identified spike in UDP traffic from 192.168.100.50
+- Contacted customer to verify if this IP should be generating high traffic
+- Customer confirmed this is a new backup server they installed last week
+- Recommended implementing traffic shaping rules
+
+Resolution:
+- Configured traffic shaping policy to limit backup traffic to 50Mbps during business hours
+- Applied policy to firewall rules
+- Tested connectivity - response times back to normal
+- Customer confirmed issue resolved
+
+Close Notes: Issue resolved by implementing traffic shaping for new backup server. Customer reported normal performance restored. No further action needed.
+
+Incident Status: Resolved
+Resolution Time: 19 hours
+Time Worked: 3.0 hours

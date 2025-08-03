@@ -48,7 +48,23 @@ class TicketAuditor(BaseAuditor):
             temperature=0.3
         )
         
-        return response.choices[0].message.content
+        # Log API response for debugging
+        print("OpenAI API Full Response:", response)
+        print("DEBUG: audit_ticket method called with prompt:", prompt)
+
+        # Extract and process the text attribute from the response
+        audit_results = []
+        if response.choices:
+            for choice in response.choices:
+                if hasattr(choice.message, 'content'):
+                    audit_results.append(choice.message.content)
+                else:
+                    print(f"⚠️ Skipping choice without 'content' attribute: {choice}")
+
+        if audit_results:
+            return "\n\n".join(audit_results)
+        else:
+            raise ValueError("Unexpected response structure: No valid content found")
     
     def get_available_models(self):
         """Get list of available OpenAI models"""

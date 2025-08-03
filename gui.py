@@ -76,17 +76,36 @@ with st.sidebar:
 st.markdown("---")
 st.header("🤖 Configuration")
 
-# Check if API keys are already loaded from .env
-env_openai_key = os.getenv('OPENAI_API_KEY', '')
-env_anthropic_key = os.getenv('ANTHROPIC_API_KEY', '')
+# Check if API keys are available from .env or Streamlit secrets
+def get_api_key(key_name):
+    """Get API key from environment or Streamlit secrets"""
+    # First try environment variables (local development)
+    env_key = os.getenv(key_name, '')
+    if env_key and env_key != f'your_{key_name.lower()}_here':
+        return env_key
+    
+    # Then try Streamlit secrets (cloud deployment)
+    try:
+        if hasattr(st, 'secrets') and key_name in st.secrets:
+            return st.secrets[key_name]
+    except Exception:
+        pass
+    
+    return ''
+
+env_openai_key = get_api_key('OPENAI_API_KEY')
+env_anthropic_key = get_api_key('ANTHROPIC_API_KEY')
 
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    # AI Provider Selection - Claude as default
+    # AI Provider Selection
+    provider_options = ["Claude (Anthropic) - Recommended", "OpenAI"]
+    
     ai_provider = st.selectbox(
-        "AI Provider",
-        ["Claude (Anthropic) - Recommended", "OpenAI"],
+        "AI Provider", 
+        provider_options,
+        index=0,
         help="Claude 3.5 Sonnet provides superior compliance reasoning for Network Team audits"
     )
     
@@ -97,34 +116,36 @@ with col1:
     # API Key handling based on provider
     if ai_provider == "OpenAI":
         if env_openai_key:
-            st.success("✅ OpenAI API Key loaded from .env file")
+            st.success("✅ OpenAI API Key loaded from environment/secrets")
             api_key_input = env_openai_key
             # Optional override
             override_key = st.text_input("Override OpenAI API Key (optional)", type="password", 
-                                       placeholder="Leave blank to use .env key")
+                                       placeholder="Leave blank to use configured key")
             if override_key:
                 api_key_input = override_key
         else:
+            st.warning("⚠️ OpenAI API key not configured")
             api_key_input = st.text_input("OpenAI API Key", type="password", 
-                                        help="Get your API key from OpenAI")
+                                        help="Get your API key from OpenAI or configure in Streamlit secrets")
         
         if api_key_input:
             os.environ['OPENAI_API_KEY'] = api_key_input
             
     else:  # Claude (default)
         if env_anthropic_key and env_anthropic_key != 'your_anthropic_api_key_here':
-            st.success("✅ Claude API Key loaded from .env file")
+            st.success("✅ Claude API Key loaded from environment/secrets")
             anthropic_key = env_anthropic_key
             # Optional override
             override_key = st.text_input("Override Claude API Key (optional)", type="password", 
-                                       placeholder="Leave blank to use .env key")
+                                       placeholder="Leave blank to use configured key")
             if override_key:
                 anthropic_key = override_key
         else:
+            st.warning("⚠️ Anthropic API key not configured")
             anthropic_key = st.text_input(
                 "Claude API Key", 
                 type="password",
-                help="Get your API key from https://console.anthropic.com/"
+                help="Get your API key from https://console.anthropic.com/ or configure in Streamlit secrets"
             )
         
         if anthropic_key:
@@ -132,11 +153,11 @@ with col1:
 
 with col2:
     if ai_provider == "OpenAI":
-        # Use default model from .env if available
-        default_model = os.getenv('DEFAULT_MODEL', 'gpt-4o-mini')
+        # Use default model from environment or Streamlit secrets
+        default_model = get_api_key('DEFAULT_MODEL') or 'gpt-4o-mini'
         model_options = ["gpt-4o-mini", "gpt-4", "gpt-3.5-turbo"]
         
-        # Set default index based on .env setting
+        # Set default index based on configured setting
         try:
             default_index = model_options.index(default_model)
         except ValueError:
