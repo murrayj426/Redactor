@@ -1,7 +1,23 @@
 import pdfplumber
 import re
-import pyperclip
 import streamlit as st
+
+# Import pyperclip safely - it may not be available in all environments
+try:
+    import pyperclip
+    CLIPBOARD_AVAILABLE = True
+except ImportError:
+    CLIPBOARD_AVAILABLE = False
+
+def safe_copy_to_clipboard(text):
+    """Safely copy text to clipboard, handling cases where clipboard is not available"""
+    if not CLIPBOARD_AVAILABLE:
+        return False
+    try:
+        pyperclip.copy(text)
+        return True
+    except Exception:
+        return False
 
 # Compile regex patterns once for better performance
 REGEX_PATTERNS = {
@@ -129,35 +145,20 @@ def redact_sensitive(text):
             'warmly', 'regards', 'sincerely', 'thanks', 'dear team'
         ]
         
-        # For now, let's be very conservative and only truncate obvious person names
-        # in specific contexts (this would need full text context to implement properly)
-        
-        # Conservative person name detection - only redact actual person names
-        # Names to redact (people's names)
-        person_names_to_redact = [
-            'daniel gallardo', 'daniel g', 'robert b', 'robert brown', 'jason whisman', 
-            'kaushal sanwal', 'chandni pandey', 'jeremy murray', 'greg n', 'gregory n',
-            'shubham c', 'naveed c'
-        ]
-        
-        full_lower = full_match.lower()
-        
-        # Check if this is a person's name that should be redacted
-        for person_name in person_names_to_redact:
-            if full_lower.startswith(person_name.split()[0]) and len(person_name.split()) >= 2:
-                if full_lower == person_name or full_lower.startswith(person_name):
-                    name_count += 1
-                    return f"{first_word} {second_word[0]}."
-        
-        # Also check for pattern matching known first names with last name initials
-        known_first_names = ['daniel', 'robert', 'jason', 'kaushal', 'chandni', 'jeremy', 'greg', 'gregory', 'shubham', 'naveed']
-        
-        if (first_word.lower() in known_first_names and 
-            len(second_word) >= 2 and 
-            second_word[1].islower()):  # Second word is a full word, not an initial
-            # This looks like a person's name (First Lastname format)
-            name_count += 1
-            return f"{first_word} {second_word[0]}."
+        # Generic person name detection - redact any "First Last" pattern that doesn't match business terms
+        # Only redact if it looks like a person's name (First word + Last word, both proper case)
+        if (len(first_word) >= 2 and len(second_word) >= 2 and 
+            first_word[0].isupper() and first_word[1:].islower() and
+            second_word[0].isupper() and second_word[1:].islower()):
+            
+            # This looks like a person's name pattern (First Lastname format)
+            # Additional check: skip if it's likely a technical term or place name
+            if not any(word.lower() in ['server', 'device', 'network', 'system', 'router', 'switch', 
+                                      'cluster', 'node', 'host', 'gateway', 'bridge', 'port',
+                                      'airport', 'stadium', 'tower', 'center', 'building'] 
+                      for word in [first_word, second_word]):
+                name_count += 1
+                return f"{first_word} {second_word[0]}."
         
         # Default: preserve the original text (business terms, locations, etc.)
         return full_match
@@ -191,7 +192,10 @@ def extract_text_from_pdf(file_path, max_pages=None):
         full_text = "\n".join(text_chunks)
     
     redacted_text, redaction_stats = redact_sensitive(full_text)
-    pyperclip.copy(redacted_text)
+    
+    # Try to copy to clipboard silently (for local development convenience)
+    safe_copy_to_clipboard(redacted_text)
+        
     return redacted_text, redaction_stats
 
 def run_redactor_gui():
@@ -206,7 +210,16 @@ def run_redactor_gui():
         redacted_text, redaction_stats = redact_sensitive(full_text)
         st.text_area("🔒 Redacted Content", redacted_text, height=400)
 
-        if st.button("📋 Copy to Clipboard"):
-            pyperclip.copy(redacted_text)
-            st.success("Redacted content copied to clipboard!")
+        # Show clipboard button with appropriate messaging
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            if st.button("📋 Copy to Clipboard"):
+                if safe_copy_to_clipboard(redacted_text):
+                    st.success("Redacted content copied to clipboard!")
+                else:
+                    st.warning("⚠️ Clipboard not available in this environment.")
+                    st.info("💡 Tip: Select all text in the box above and use Ctrl+C (or Cmd+C on Mac) to copy.")
+        with col2:
+            if not CLIPBOARD_AVAILABLE:
+                st.caption("ℹ️ Manual copy required")
 

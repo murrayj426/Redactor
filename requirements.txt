@@ -11,3 +11,6 @@ cachetools>=5.0.0
 
 # Error handling and monitoring
 requests>=2.28.0
+
+# Note: pyperclip may not work in all cloud environments
+# The app will gracefully degrade if clipboard access is not available
