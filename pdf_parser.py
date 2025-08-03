@@ -62,12 +62,15 @@ def redact_sensitive(text):
         full_match = match.group(0)
         
         # Check if this appears to be a technical case number (preceded by #, case #, ticket #, etc.)
-        # Look at the context around the match
-        start_pos = text.find(full_match)
+        # Look at the context around each specific match
+        start_pos = match.start()
         if start_pos > 0:
-            preceding_text = text[max(0, start_pos-20):start_pos].lower()
+            preceding_text = text[max(0, start_pos-25):start_pos].lower()
             # Don't redact if it looks like a case/ticket number
-            if any(indicator in preceding_text for indicator in ['#', 'case', 'ticket', 'reference', 'rma', 'tac']):
+            if any(indicator in preceding_text for indicator in ['#', 'case', 'ticket', 'reference', 'rma', 'tac', 'inc', 'req']):
+                return full_match
+            # Also check for patterns like "6-555-123-4567" where it's clearly a case number
+            if re.search(r'[#\-]\d{1,2}[-\s]*$', preceding_text):
                 return full_match
         
         actual_phone_redactions += 1
@@ -105,62 +108,89 @@ def redact_sensitive(text):
         nonlocal name_count
         full_match = match.group(0)
         first_word = match.group(1)
-        second_word = match.group(2) + match.group(0).split()[1][1:]  # Get full second word
+        second_word = match.group(0).split()[1]  # Get full second word
         
-        # Preserve all business/location/time names
-        preserve_patterns = [
-            # Geographic locations
-            r'(?i)\b(?:niagara|delaware|eastern|western|northern|southern|central|melbourne|presidio|docklands|tower)\b',
-            # Business terms and titles
-            r'(?i)\b(?:security|service|management|client|customer|activity|change|incident|request|access|event|status|pending|hold|time|integration|monitoring|network|device|system|server|router|switch|firewall|appliance|configuration|automation|logic|checkpoint|verizon|logicmonitor)\b',
-            # Company/business names
-            r'(?i)\b(?:companies|inc|corp|ltd|llc|presidio|delaware|north|falls|stadium|docklands)\b',
-            # Time and date terms
-            r'(?i)\b(?:daylight|standard|mountain|pacific|atlantic|time|date|worked|notes|steps|team|group)\b',
-            # Process terms
-            r'(?i)\b(?:resolution|escalation|priority|impact|urgency|assignment|category|subcategory|offering|carrier|vendor|circuit|wireless|billing|reporting|entitlement)\b'
-        ]
-        
-        # Check if either word matches business/location patterns
-        for pattern in preserve_patterns:
-            if re.search(pattern, first_word) or re.search(pattern, second_word):
-                return full_match  # Keep original
-        
-        # Additional specific preservations based on your document
-        specific_preserves = {
-            'niagara falls', 'delaware north', 'eastern daylight', 'melbourne docklands',
-            'network services', 'security device', 'service offering', 'configuration item',
-            'time worked', 'activity task', 'incident details', 'work notes',
-            'monitoring automation', 'integration user', 'escalation group'
+        # Comprehensive list of business/technical terms to preserve
+        business_terms = {
+            # Geographic and locations
+            'niagara', 'delaware', 'eastern', 'western', 'northern', 'southern', 'central', 
+            'melbourne', 'presidio', 'docklands', 'tower', 'wheeling', 'downs', 'gaming',
+            'falls', 'stadium', 'island', 'hotel', 'casino', 'racetrack',
+            
+            # Business/Service terms
+            'security', 'service', 'management', 'client', 'customer', 'activity', 'change',
+            'incident', 'request', 'access', 'event', 'status', 'pending', 'hold', 'time',
+            'integration', 'monitoring', 'network', 'device', 'system', 'server', 'router',
+            'switch', 'firewall', 'appliance', 'configuration', 'automation', 'logic',
+            'checkpoint', 'verizon', 'logicmonitor', 'datacenter', 'center',
+            
+            # Company names and business entities
+            'companies', 'inc', 'corp', 'ltd', 'llc', 'north', 'services', 'offering',
+            'category', 'subcategory', 'carrier', 'vendor', 'circuit', 'wireless',
+            
+            # Time and process terms
+            'daylight', 'standard', 'mountain', 'pacific', 'atlantic', 'worked', 'notes',
+            'steps', 'team', 'group', 'resolution', 'escalation', 'priority', 'impact',
+            'urgency', 'assignment', 'billing', 'reporting', 'entitlement',
+            
+            # Technical terms
+            'resource', 'offline', 'online', 'critical', 'medium', 'high', 'low',
+            'vmware', 'microsoft', 'windows', 'linux', 'cisco', 'meraki', 'unity',
+            'ethernet', 'fabric', 'virtual', 'backup', 'restore', 'patch', 'managed',
+            'collaboration', 'engineer', 'datacenter', 'storage', 'compute', 'hypervisor',
+            
+            # ServiceNow and ticket fields
+            'caller', 'opened', 'assigned', 'resolved', 'closed', 'updated', 'created',
+            'description', 'summary', 'comments', 'worknotes', 'private', 'public',
+            'ticket', 'number', 'state', 'reason', 'follow', 'contact', 'business',
+            'location', 'impact', 'urgency', 'priority', 'assignment', 'handoff'
         }
         
-        full_lower = full_match.lower()
-        if full_lower in specific_preserves:
+        # Check if either word is a business/technical term
+        if (first_word.lower() in business_terms or 
+            second_word.lower() in business_terms):
             return full_match  # Keep original
         
-        # Only redact if it looks like an actual person's name in a personal context
-        # Look for patterns that suggest it's a person (like email signatures, assignments, etc.)
-        context_indicators = [
-            'assigned to', 'resolved by', 'updated by', 'created by', 'caller name',
-            'warmly', 'regards', 'sincerely', 'thanks', 'dear team'
-        ]
+        # Additional check for compound business terms
+        compound_lower = full_match.lower()
+        compound_terms = {
+            'delaware north', 'niagara falls', 'eastern daylight', 'melbourne docklands',
+            'network services', 'security device', 'service offering', 'configuration item',
+            'time worked', 'activity task', 'incident details', 'work notes',
+            'monitoring automation', 'integration user', 'escalation group', 'wheeling downs',
+            'gaming location', 'hotel casino', 'casino racetrack', 'system server',
+            'device management', 'resource offline', 'vmware center', 'microsoft windows',
+            'network circuit', 'ip address', 'mac address', 'backup services',
+            'managed services', 'data center', 'patch management', 'collaboration engineer',
+            'security engineer', 'network engineer', 'systems engineer'
+        }
         
-        # Generic person name detection - redact any "First Last" pattern that doesn't match business terms
-        # Only redact if it looks like a person's name (First word + Last word, both proper case)
+        if compound_lower in compound_terms:
+            return full_match  # Keep original
+        
+        # Check for technical naming patterns (often contain numbers, underscores, or domain-like structures)
+        if (re.search(r'\d', full_match) or '_' in full_match or 
+            '.' in full_match or any(tech in full_match.lower() 
+            for tech in ['vm', 'srv', 'app', 'db', 'fw', 'sw', 'rtr', 'ws'])):
+            return full_match  # Keep technical names
+            
+        # Only redact if it looks like an actual person's name
+        # Must be proper case (First Last format) and not match any business patterns
         if (len(first_word) >= 2 and len(second_word) >= 2 and 
             first_word[0].isupper() and first_word[1:].islower() and
             second_word[0].isupper() and second_word[1:].islower()):
             
-            # This looks like a person's name pattern (First Lastname format)
-            # Additional check: skip if it's likely a technical term or place name
-            if not any(word.lower() in ['server', 'device', 'network', 'system', 'router', 'switch', 
-                                      'cluster', 'node', 'host', 'gateway', 'bridge', 'port',
-                                      'airport', 'stadium', 'tower', 'center', 'building'] 
-                      for word in [first_word, second_word]):
-                name_count += 1
-                return f"{first_word} {second_word[0]}."
+            # Additional filters for likely person names vs business terms
+            # Skip common business word patterns
+            business_endings = ['ing', 'tion', 'ment', 'ness', 'ity', 'ics', 'ogy']
+            if any(second_word.lower().endswith(ending) for ending in business_endings):
+                return full_match  # Keep business terms
+            
+            # This appears to be a person's name - redact it
+            name_count += 1
+            return f"{first_word} {second_word[0]}."
         
-        # Default: preserve the original text (business terms, locations, etc.)
+        # Default: preserve the original text
         return full_match
     
     text = REGEX_PATTERNS['names'].sub(name_replacer, text)
