@@ -46,10 +46,30 @@ def redact_sensitive(text):
         'total_redactions': 0
     }
     
-    # Use pre-compiled regex patterns for better performance
+    # IP address redaction with business logic - preserve internal ranges for operational context
+    def ip_replacer(match):
+        ip = match.group(0)
+        # Preserve common internal IP ranges that are needed for operational context
+        # Keep 10.x.x.x, 172.16-31.x.x, and 192.168.x.x ranges
+        parts = ip.split('.')
+        if len(parts) == 4:
+            try:
+                first_octet = int(parts[0])
+                second_octet = int(parts[1])
+                # Keep internal/private IP ranges for operational context
+                if (first_octet == 10 or 
+                    (first_octet == 172 and 16 <= second_octet <= 31) or
+                    (first_octet == 192 and second_octet == 168)):
+                    return ip  # Keep internal IPs
+            except ValueError:
+                pass
+        # Redact public IPs
+        return "[REDACTED IP]"
+    
     ip_matches = REGEX_PATTERNS['ip_addresses'].findall(text)
-    redaction_stats['ip_addresses'] = len(ip_matches)
-    text = REGEX_PATTERNS['ip_addresses'].sub("[REDACTED IP]", text)
+    actual_ip_redactions = len([ip for ip in ip_matches if not ip.startswith(('10.', '172.', '192.168.'))])
+    text = REGEX_PATTERNS['ip_addresses'].sub(ip_replacer, text)
+    redaction_stats['ip_addresses'] = actual_ip_redactions
     
     mac_matches = REGEX_PATTERNS['mac_addresses'].findall(text)
     redaction_stats['mac_addresses'] = len(mac_matches)
@@ -117,18 +137,30 @@ def redact_sensitive(text):
             # Geographic and locations
             'niagara', 'delaware', 'eastern', 'western', 'northern', 'southern', 'central', 
             'melbourne', 'presidio', 'docklands', 'tower', 'wheeling', 'downs', 'gaming',
-            'falls', 'stadium', 'island', 'hotel', 'casino', 'racetrack',
+            'falls', 'stadium', 'island', 'hotel', 'casino', 'racetrack', 'banquet', 'buffet',
+            'showroom', 'employee', 'lounge', 'giftshop', 'sportsbook', 'human', 'resources',
+            'pointe', 'restaurant', 'datacenter', 'promotions', 'spare', 'production',
             
-            # Business/Service terms
+            # Business/Service terms (removed common first/last names like 'jeremy', 'murray')
             'security', 'service', 'management', 'client', 'customer', 'activity', 'change',
             'incident', 'request', 'access', 'event', 'status', 'pending', 'hold', 'time',
             'integration', 'monitoring', 'network', 'device', 'system', 'server', 'router',
             'switch', 'firewall', 'appliance', 'configuration', 'automation', 'logic',
-            'checkpoint', 'verizon', 'logicmonitor', 'datacenter', 'center',
+            'checkpoint', 'verizon', 'logicmonitor', 'datacenter', 'center', 'unified',
+            'communications', 'manager', 'vmware', 'vcenter', 'instance', 'compute', 'storage',
+            
+            # Technical system identifiers and model numbers
+            'gewig', 'gewiggafw', 'gewigga', 'gewigoamt', 'gewig16nv', 'gewig16dhcp',
+            'gewigfpclus', 'gewigagysws', 'gewig16v1ws', 'gewig19clus', 'gewiggavrapp',
+            'gewig19fp', 'meraki', 'cisco', 'catalyst', 'proliant', 'nimble', 'checkpoint',
+            'mr32', 'ws-c3560x', 'ws-c2960', 'bl460c', 'gen9', 'esxi', 'windows', 'linux',
+            'ubuntu', 'redhat', 'centos', 'vmware', 'microsoft', 'intel', 'amd', 'hp', 'dell',
+            'itrak', 'everi', 'floor', 'monitor', 'unavailable', 'offline', 'online',
             
             # Company names and business entities
             'companies', 'inc', 'corp', 'ltd', 'llc', 'north', 'services', 'offering',
             'category', 'subcategory', 'carrier', 'vendor', 'circuit', 'wireless',
+            'comcast', 'segra', 'start', 'metro', 'eline', 'etta', 'lopp', 'cfw',
             
             # Time and process terms - EXPANDED
             'daylight', 'standard', 'mountain', 'pacific', 'atlantic', 'worked', 'notes',
@@ -136,17 +168,33 @@ def redact_sensitive(text):
             'urgency', 'assignment', 'billing', 'reporting', 'entitlement', 'date', 'run',
             'opened', 'closed', 'updated', 'created', 'resolved', 'assigned', 'caller',
             'contact', 'description', 'summary', 'comments', 'worknotes', 'private', 'public',
+            'minutes', 'seconds', 'hours', 'days', 'weeks', 'months', 'years', 'elapsed',
+            'percentage', 'achieved', 'cancelled', 'breached', 'threshold', 'alert', 'level',
             
             # Ticket states and workflow terms
             'progress', 'pending', 'hold', 'cancelled', 'new', 'draft', 'review', 'approved',
             'rejected', 'processing', 'complete', 'failed', 'success', 'waiting', 'active',
             'inactive', 'enabled', 'disabled', 'available', 'unavailable', 'maintenance',
+            'operational', 'critical', 'high', 'medium', 'low', 'informational', 'warning',
+            'error', 'debug', 'trace', 'verbose', 'quiet', 'silent',
             
             # Technical terms
             'resource', 'offline', 'online', 'critical', 'medium', 'high', 'low',
             'vmware', 'microsoft', 'windows', 'linux', 'cisco', 'meraki', 'unity',
             'ethernet', 'fabric', 'virtual', 'backup', 'restore', 'patch', 'managed',
             'collaboration', 'engineer', 'datacenter', 'storage', 'compute', 'hypervisor',
+            'vmotion', 'drs', 'ha', 'cluster', 'domain', 'controller', 'dhcp', 'dns',
+            'ntp', 'snmp', 'ssh', 'rdp', 'vnc', 'console', 'terminal', 'shell', 'bash',
+            'powershell', 'cmd', 'registry', 'service', 'daemon', 'process', 'thread',
+            'memory', 'cpu', 'disk', 'network', 'interface', 'port', 'protocol', 'tcp',
+            'udp', 'icmp', 'http', 'https', 'ftp', 'sftp', 'smtp', 'pop3', 'imap',
+            
+            # Monitoring and alerting terms
+            'monitor', 'alert', 'notification', 'threshold', 'baseline', 'metric',
+            'dashboard', 'report', 'analytics', 'statistics', 'performance', 'utilization',
+            'capacity', 'availability', 'reliability', 'scalability', 'security',
+            'compliance', 'audit', 'log', 'event', 'incident', 'problem', 'change',
+            'release', 'deployment', 'rollback', 'maintenance', 'upgrade', 'downgrade',
             
             # ServiceNow and ticket fields
             'caller', 'opened', 'assigned', 'resolved', 'closed', 'updated', 'created',
@@ -194,16 +242,51 @@ def redact_sensitive(text):
             'related list', 'problem ticket', 'parent incident', 'customer ticket',
             'service restored', 'business impact', 'time worked', 'priority impact',
             'assignment group', 'escalation group', 'primary agreement', 'secondary contact',
-            'reference number', 'last resolved', 'last updated', 'last touched'
+            'reference number', 'last resolved', 'last updated', 'last touched',
+            
+            # Technical system combinations
+            'access point', 'network gear', 'ip switch', 'network switch', 'ip firewall',
+            'esx server', 'vmware esxi', 'windows server', 'linux server', 'blade server',
+            'storage device', 'backup device', 'monitoring device', 'security appliance',
+            'network appliance', 'presidio appliance', 'managed device', 'compute device',
+            'virtual machine', 'virtual server', 'virtual appliance', 'compute resource',
+            'storage resource', 'network resource', 'backup resource', 'security resource',
+            
+            # Location and facility terms
+            'wheeling downs', 'melbourne docklands', 'hotel casino', 'casino racetrack',
+            'gaming hotel', 'hotel guest', 'production network', 'guest network',
+            'employee lounge', 'human resources', 'sports book', 'gift shop',
+            'pointe restaurant', 'banquet comcast', 'data center', 'spare production',
+            
+            # Service and business process terms
+            'business service', 'network services', 'managed services', 'data protection',
+            'patch management', 'carrier case', 'dispatch services', 'backup services',
+            'cloud foundations', 'select tier', 'priority email', 'quarterly true',
+            'ticket integration', 'shared document', 'meraki portal', 'live tracking',
+            'high touch', 'remote access', 'time resolve', 'escalation via',
+            'logicmonitor monitoring', 'allied servicedesk', 'cattools monitoring',
+            'high wire', 'redundant appliance', 'snmp configure', 'logicmonitor backups'
         }
         
         if compound_lower in compound_terms:
             return full_match  # Keep original
         
         # Check for technical naming patterns (often contain numbers, underscores, or domain-like structures)
+        # Enhanced technical identifier detection
+        technical_patterns = [
+            r'^[A-Z]{3,}[A-Z0-9]+$',  # GEWIGGAFW01, DELWA001, etc.
+            r'^[a-z]+[0-9]+[a-z]*[0-9]*$',  # gewig16v1ws01, etc.
+            r'^[A-Z]+[0-9]+[A-Z]*[0-9]*$',  # INC11973728, etc.
+            r'.*\.(ad\.dncinc\.com|prod\.presidiosecure\.com)$',  # Domain names
+            r'^[A-Z]{2,}\d{2,}$',  # MR32, etc.
+            r'^Q2[A-Z0-9-]+$',  # Serial numbers like Q2JD-GRKF-3VJF
+            r'^[A-Z]{3}[0-9]{6}$',  # FCQ1601X4V8 style codes
+        ]
+        
         if (re.search(r'\d', full_match) or '_' in full_match or 
             '.' in full_match or any(tech in full_match.lower() 
-            for tech in ['vm', 'srv', 'app', 'db', 'fw', 'sw', 'rtr', 'ws'])):
+            for tech in ['vm', 'srv', 'app', 'db', 'fw', 'sw', 'rtr', 'ws', 'inc', 'gewig']) or
+            any(re.match(pattern, full_match) for pattern in technical_patterns)):
             return full_match  # Keep technical names
             
         # Only redact if it looks like an actual person's name
