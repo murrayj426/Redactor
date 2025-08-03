@@ -128,10 +128,12 @@ def redact_sensitive(text):
             'companies', 'inc', 'corp', 'ltd', 'llc', 'north', 'services', 'offering',
             'category', 'subcategory', 'carrier', 'vendor', 'circuit', 'wireless',
             
-            # Time and process terms
+            # Time and process terms - EXPANDED
             'daylight', 'standard', 'mountain', 'pacific', 'atlantic', 'worked', 'notes',
             'steps', 'team', 'group', 'resolution', 'escalation', 'priority', 'impact',
-            'urgency', 'assignment', 'billing', 'reporting', 'entitlement',
+            'urgency', 'assignment', 'billing', 'reporting', 'entitlement', 'date', 'run',
+            'opened', 'closed', 'updated', 'created', 'resolved', 'assigned', 'caller',
+            'contact', 'description', 'summary', 'comments', 'worknotes', 'private', 'public',
             
             # Technical terms
             'resource', 'offline', 'online', 'critical', 'medium', 'high', 'low',
@@ -162,7 +164,12 @@ def redact_sensitive(text):
             'device management', 'resource offline', 'vmware center', 'microsoft windows',
             'network circuit', 'ip address', 'mac address', 'backup services',
             'managed services', 'data center', 'patch management', 'collaboration engineer',
-            'security engineer', 'network engineer', 'systems engineer'
+            'security engineer', 'network engineer', 'systems engineer', 'run date',
+            'run by', 'opened by', 'assigned to', 'contact type', 'ticket integration',
+            'business service', 'configuration item', 'service restored', 'additional comments',
+            'short description', 'current status', 'next steps', 'work notes', 'incident number',
+            'customer ticket', 'time worked', 'assignment group', 'responsible party',
+            'service offering', 'network management', 'escalation group', 'primary agreement'
         }
         
         if compound_lower in compound_terms:
