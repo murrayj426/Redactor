@@ -1,1 +1,0 @@
-This is a sample ticket text for testing the Claude Auditor API.

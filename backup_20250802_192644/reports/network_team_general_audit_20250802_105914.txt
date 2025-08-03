@@ -1,9 +1,0 @@
-=== INCIDENT AUDIT REPORT (15-QUESTION FRAMEWORK) ===
-Generated: 2025-08-02 10:59:14
-Audit Type: NETWORK_TEAM_GENERAL
-============================================================
-
-Error during audit: Error code: 429 - {'error': {'message': 'Request too large for gpt-4 in organization org-XHzXxCaRHQZUDXeE8rjL5T1P on tokens per min (TPM): Limit 10000, Requested 17453. The input or output tokens must be reduced in order to run successfully. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}
-
-============================================================
-Report saved to: reports/network_team_general_audit_20250802_105914.txt
