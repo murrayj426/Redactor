@@ -36,3 +36,10 @@ wheels/
 
 # macOS
 .DS_Store
+
+# Backup files
+backup_*.tar.gz
+backup_*/
+
+# Generated audit reports
+reports/*.txt
