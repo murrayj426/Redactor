@@ -42,6 +42,7 @@ def redact_sensitive(text):
         'imei_numbers': 0,
         'account_numbers': 0,
         'urls': 0,
+        'run_by_fields': 0,
         'names_truncated': 0,
         'total_redactions': 0
     }
@@ -172,6 +173,14 @@ def redact_sensitive(text):
     url_matches = REGEX_PATTERNS['urls'].findall(text)
     redaction_stats['urls'] = len(url_matches)
     text = REGEX_PATTERNS['urls'].sub("[REDACTED URL]", text)
+    
+    # Run By fields - redact user information after "Run By:" (ServiceNow export metadata)
+    # Handle both "Run by:" and "Run By:" variations with flexible spacing
+    run_by_pattern = r"(Run [Bb]y\s*:\s*)[^\n]+"
+    run_by_matches = re.findall(run_by_pattern, text)
+    redaction_stats['run_by_fields'] = len(run_by_matches)
+    text = re.sub(run_by_pattern, r"\1[REDACTED]", text)
+    
     # Names - Much more conservative approach, focus on actual person names only
     name_count = 0
     
