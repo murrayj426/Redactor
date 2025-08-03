@@ -43,3 +43,7 @@ backup_*/
 
 # Generated audit reports
 reports/*.txt
+# Test and work files
+*.pdf
+*extracted*.txt
+test_*.txt
