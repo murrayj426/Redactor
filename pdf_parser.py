@@ -55,23 +55,23 @@ def redact_sensitive(text):
     redaction_stats['mac_addresses'] = len(mac_matches)
     text = REGEX_PATTERNS['mac_addresses'].sub("[REDACTED MAC]", text)
     
-    # Phone numbers - but exclude technical case numbers
+    # Phone numbers - exclude Checkpoint TAC cases and other reference numbers
     actual_phone_redactions = 0
     def phone_replacer(match):
         nonlocal actual_phone_redactions
         full_match = match.group(0)
         
-        # Check if this appears to be a technical case number (preceded by #, case #, ticket #, etc.)
-        # Look at the context around each specific match
+        # Check context around the match
         start_pos = match.start()
         if start_pos > 0:
-            preceding_text = text[max(0, start_pos-25):start_pos].lower()
-            # Don't redact if it looks like a case/ticket number - use word boundaries for more precise matching
-            case_indicators = [r'\bcase\b', r'\bticket\b', r'\breference\b', r'\brma\b', r'\btac\b', r'\binc\b', r'\breq\b', r'#']
-            if any(re.search(indicator, preceding_text) for indicator in case_indicators):
+            preceding_text = text[max(0, start_pos-15):start_pos].lower()
+            
+            # Exclude Checkpoint TAC case numbers (6-followed by 10 digits)
+            if preceding_text.endswith('6-') and len(full_match) == 10 and full_match.isdigit():
                 return full_match
-            # Also check for patterns like "6-555-123-4567" where it's clearly a case number
-            if re.search(r'[#\-]\d{1,2}[-\s]*$', preceding_text):
+            
+            # Only skip if it's clearly a case/reference number with # symbol
+            if '#' in preceding_text:
                 return full_match
         
         actual_phone_redactions += 1
