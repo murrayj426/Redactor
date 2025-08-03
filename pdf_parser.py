@@ -135,6 +135,11 @@ def redact_sensitive(text):
             'opened', 'closed', 'updated', 'created', 'resolved', 'assigned', 'caller',
             'contact', 'description', 'summary', 'comments', 'worknotes', 'private', 'public',
             
+            # Ticket states and workflow terms
+            'progress', 'pending', 'hold', 'cancelled', 'new', 'draft', 'review', 'approved',
+            'rejected', 'processing', 'complete', 'failed', 'success', 'waiting', 'active',
+            'inactive', 'enabled', 'disabled', 'available', 'unavailable', 'maintenance',
+            
             # Technical terms
             'resource', 'offline', 'online', 'critical', 'medium', 'high', 'low',
             'vmware', 'microsoft', 'windows', 'linux', 'cisco', 'meraki', 'unity',
@@ -169,7 +174,13 @@ def redact_sensitive(text):
             'business service', 'configuration item', 'service restored', 'additional comments',
             'short description', 'current status', 'next steps', 'work notes', 'incident number',
             'customer ticket', 'time worked', 'assignment group', 'responsible party',
-            'service offering', 'network management', 'escalation group', 'primary agreement'
+            'service offering', 'network management', 'escalation group', 'primary agreement',
+            # Common ticket states and workflow combinations
+            'in progress', 'on hold', 'pending client', 'pending vendor', 'pending approval',
+            'work in', 'under review', 'awaiting approval', 'pending closure',
+            'pending customer', 'pending internal', 'high priority', 'low priority',
+            'medium priority', 'critical priority', 'service restored', 'service degraded',
+            'in review', 'work progress', 'solution provided'
         }
         
         if compound_lower in compound_terms:
