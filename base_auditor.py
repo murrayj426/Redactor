@@ -199,13 +199,14 @@ CRITICAL: Use proper line breaks and spacing. Add a blank line after each sectio
 
 📋 **PERSONAL AUDIT NOTES FROM YOUR TEAM LEAD**:
 
+
 Write a concise 2-3 sentence audit note using **Markdown formatting** with the following structure:
 
-**[Engineer Name],** your handling of incident [INC#] shows **[key strength - reference specific Network Team procedure compliance]**. **[One area for improvement or continued excellence, referencing Network Team standards]**. **[Encouraging conclusion about overall performance]**.
+**[Engineer Name],** your handling of incident [INC#] shows **[key strength - reference specific compliance with the Incident Handling and Documentation Standards]**. **[One area for improvement or continued excellence, referencing the Incident Handling and Documentation Standards]**. **[Encouraging conclusion about overall performance]**.
 
 **EXAMPLE:**
 
-**Kaushal S.,** your handling of incident INC11814999 shows **excellent adherence to our Ticket Acceptance Templates and professional client communication standards**. **Continue this level of thorough troubleshooting documentation - it's exactly what our Network Team procedures require**. **Great work maintaining procedural compliance throughout the incident lifecycle**.
+**Kaushal S.,** your handling of incident INC11814999 shows **excellent adherence to our Incident Handling and Documentation Standards and professional communication protocols**. **Continue this level of thorough troubleshooting documentation and clear next steps—it's exactly what our Incident Handling and Documentation Standards require**. **Great work maintaining consistent quality throughout the incident lifecycle**.
 
 Use this **bold formatting**, keep it personal and supportive, and make it feel like authentic manager feedback that directly references Network Team procedures and standards.
 
