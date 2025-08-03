@@ -165,10 +165,11 @@ CRITICAL: Use proper line breaks and spacing. Add a blank line after each sectio
 **Answer Required**: Text response (not scored - documentation only)
 **Network Team Standard**: Provide detailed explanation of any task management issues identified
 
+
 **14. Time Tracking Accuracy**
-**Question**: Did the engineer accurately document their Time Worked entries?
+**Question**: Did the assigned engineer personally document at least one of their own Time Worked entries (not just any team member)?
 **Answer Required**: ✅ PASS / ❌ FAIL (N/A not allowed)
-**Network Team Standard**: Time Worked field must be populated accurately for cost evaluation
+**Network Team Standard**: The engineer assigned to the ticket ("Assigned to" or responsible party) must be the author of at least one Time Worked entry. Do not pass if only other people entered time. Quote the author of the Time Worked entry and show it matches the assigned engineer. If not, FAIL and explain what is missing.
 
 **15. Resolution Documentation**
 **Question**: Do the 'Close Notes' accurately reflect the work that was done and provide evidence of resolution?
