@@ -150,7 +150,12 @@ def redact_sensitive(text):
             'caller', 'opened', 'assigned', 'resolved', 'closed', 'updated', 'created',
             'description', 'summary', 'comments', 'worknotes', 'private', 'public',
             'ticket', 'number', 'state', 'reason', 'follow', 'contact', 'business',
-            'location', 'impact', 'urgency', 'priority', 'assignment', 'handoff'
+            'location', 'impact', 'urgency', 'priority', 'assignment', 'handoff',
+            
+            # ServiceNow field abbreviations (to prevent accidental truncation)
+            'report', 'configuration', 'alert', 'query', 'related', 'problem', 
+            'parent', 'customer', 'service', 'business', 'time', 'priority',
+            'assignment', 'escalation', 'primary', 'secondary', 'reference'
         }
         
         # Check if either word is a business/technical term
@@ -180,7 +185,14 @@ def redact_sensitive(text):
             'work in', 'under review', 'awaiting approval', 'pending closure',
             'pending customer', 'pending internal', 'high priority', 'low priority',
             'medium priority', 'critical priority', 'service restored', 'service degraded',
-            'in review', 'work progress', 'solution provided'
+            'in review', 'work progress', 'solution provided',
+            
+            # ServiceNow field labels and patterns
+            'report type', 'configuration item', 'alert count', 'query condition',
+            'related list', 'problem ticket', 'parent incident', 'customer ticket',
+            'service restored', 'business impact', 'time worked', 'priority impact',
+            'assignment group', 'escalation group', 'primary agreement', 'secondary contact',
+            'reference number', 'last resolved', 'last updated', 'last touched'
         }
         
         if compound_lower in compound_terms:
