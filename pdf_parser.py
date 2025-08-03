@@ -46,6 +46,55 @@ def redact_sensitive(text):
         'total_redactions': 0
     }
     
+    # First, improve ServiceNow field formatting for better readability
+    # Add line breaks before common ServiceNow field labels when they're concatenated
+    servicenow_fields = [
+        'Impact:', 'Urgency:', 'Priority:', 'Responsible party:', 'Assignment group:',
+        'Customer Assignment Group:', 'Assigned to:', 'Opened by:', 'Resolved by:',
+        'Company:', 'Location:', 'Configuration item:', 'Service Offering:',
+        'Category:', 'Subcategory:', 'Application:', 'Business service:',
+        'Service offering:', 'Contact type:', 'Caller name:', 'Caller email:',
+        'Caller phone:', 'Caller:', 'Vendor:', 'Carrier:', 'Follow up by:',
+        'Event date:', 'Primary agreement:', 'Pending reason:', 'Handoff:',
+        'Last Reoccurrence:', 'Last Touched:', 'Sync Ticket with Customer:',
+        'Service Restored:', 'Alert Cleared:', 'Short description:', 'Notes:',
+        'Watch list:', 'Time worked:', 'Customer watch list:', 'Current status:',
+        'Next steps:', 'Additional comments:', 'Close code:', 'Cause code:',
+        'Close notes:', 'Root cause:'
+    ]
+    
+    # Add line breaks before field labels that are incorrectly concatenated
+    for field in servicenow_fields:
+        # Look for patterns where a field appears after text without proper line break
+        # But avoid breaking up legitimate sentences
+        pattern = r'(\w+)\s+(' + re.escape(field) + ')'
+        replacement = r'\1\n\2'
+        
+        # Only apply if the preceding word doesn't end with common sentence endings
+        def field_replacer(match):
+            preceding_word = match.group(1)
+            field_label = match.group(2)
+            
+            # Don't break if it looks like part of a sentence
+            if preceding_word.lower() in ['high', 'medium', 'low', 'critical', 'the', 'and', 'or', 'but', 'with', 'from', 'to']:
+                return f'{preceding_word}\n{field_label}'
+            return match.group(0)
+        
+        text = re.sub(pattern, field_replacer, text)
+    
+    # Also handle common ServiceNow value-to-field patterns
+    value_field_patterns = [
+        (r'(High|Medium|Low|Critical)\s+(Responsible party:)', r'\1\n\2'),
+        (r'(Presidio|Delaware North[^:]*)\s+(Urgency:)', r'\1\n\2'),
+        (r'(\d+\s*-\s*(?:High|Medium|Low|Critical))\s+(Assignment group:)', r'\1\n\2'),
+        (r'(MSC Network Engineer|[A-Z][a-z]+ [A-Z][a-z]+)\s+(Customer Assignment Group:)', r'\1\n\2'),
+        (r'(true|false)\s+(Service Offering:)', r'\1\n\2'),
+        (r'(Network Services|[A-Z][a-z]+ [A-Z][a-z]+)\s+(Category:)', r'\1\n\2'),
+    ]
+    
+    for pattern, replacement in value_field_patterns:
+        text = re.sub(pattern, replacement, text)
+    
     # IP address redaction with business logic - preserve internal ranges for operational context
     def ip_replacer(match):
         ip = match.group(0)
