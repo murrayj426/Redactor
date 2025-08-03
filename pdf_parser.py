@@ -66,8 +66,9 @@ def redact_sensitive(text):
         start_pos = match.start()
         if start_pos > 0:
             preceding_text = text[max(0, start_pos-25):start_pos].lower()
-            # Don't redact if it looks like a case/ticket number
-            if any(indicator in preceding_text for indicator in ['#', 'case', 'ticket', 'reference', 'rma', 'tac', 'inc', 'req']):
+            # Don't redact if it looks like a case/ticket number - use word boundaries for more precise matching
+            case_indicators = [r'\bcase\b', r'\bticket\b', r'\breference\b', r'\brma\b', r'\btac\b', r'\binc\b', r'\breq\b', r'#']
+            if any(re.search(indicator, preceding_text) for indicator in case_indicators):
                 return full_match
             # Also check for patterns like "6-555-123-4567" where it's clearly a case number
             if re.search(r'[#\-]\d{1,2}[-\s]*$', preceding_text):
@@ -76,8 +77,9 @@ def redact_sensitive(text):
         actual_phone_redactions += 1
         return "[REDACTED PHONE]"
     
-    # Apply phone number redaction with context checking
-    phone_pattern = r"\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b"
+    # Apply phone number redaction with enhanced pattern for better detection
+    # Enhanced pattern to catch more phone formats: (555) 123-4567, 555-123-4567, +1-555-123-4567, etc.
+    phone_pattern = r"(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b"
     phone_matches = re.findall(phone_pattern, text)
     text = re.sub(phone_pattern, phone_replacer, text)
     redaction_stats['phone_numbers'] = actual_phone_redactions
