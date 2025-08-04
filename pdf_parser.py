@@ -31,6 +31,59 @@ REGEX_PATTERNS = {
     'names': re.compile(r"\b([A-Z][a-z]+)\s+([A-Z])[a-z]+\b")
 }
 
+def join_wrapped_lines(text):
+    """
+    Improved: Join lines that are likely continuations, but preserve field boundaries and table rows.
+    - Only join if the next line does NOT start with a field label (word(s) ending with colon), bullet, number, or [code].
+    - Insert extra line breaks after certain field groups for readability.
+    """
+    lines = text.splitlines()
+    joined_lines = []
+    # Regex for field label (e.g., 'Field Name:'), bullet, number, or [code]
+    field_label = re.compile(r"^([A-Za-z0-9 \-/\(\)\[\]#>]+:|\d+\.|[\u2022\*\-]|\[code\]|\s*$)")
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        # Insert a blank line before likely table row starts (e.g., time worked, appliance, or numbered row)
+        is_table_row = (
+            re.match(r'^(\d+\s+Minute[s]?|\d+\s+Hour[s]?|\d+\s+Day[s]?|\d+\s+\w+\s+\d{4}|\d+\s*-\s*\w+)', stripped) or
+            re.match(r'^[A-Z][a-z]+\s+[A-Z][a-z]+\s+\d{2,4}', stripped) or
+            re.match(r'^(\d+\.|[A-Z][a-z]+:)', stripped)
+        )
+        # If not the first line, and this line is not a field label, bullet, or table row start, join to previous
+        if i > 0 and stripped and not field_label.match(stripped):
+            if joined_lines and joined_lines[-1].strip():
+                joined_lines[-1] += ' ' + stripped
+            else:
+                joined_lines.append(line)
+        else:
+            # Insert blank line before new table row or repeated field group for clarity
+            if is_table_row and joined_lines and joined_lines[-1].strip():
+                joined_lines.append('')
+            joined_lines.append(line)
+    # Add extra line breaks after certain field groups for readability
+    break_after = [
+        'Run By :', 'Notes', 'Additional comments:', 'Work notes(Private):', 'Resolution:', 'RCA:', 'Short description:', 'Current status:', 'Table name:', 'Related List Title:', 'Query Condition:', 'Sort O.:', 'Incident Details Page', 'SLA definition', 'Time worked', 'Assignment group:', 'Assigned to:', 'Company:', 'Location:', 'Configuration item:', 'Category:', 'Subcategory:', 'Application:', 'Business service:', 'Service offering:', 'Contact type:', 'Caller name:', 'Caller email:', 'Caller phone:', 'Vendor:', 'Carrier:', 'Follow up by:', 'Event date:', 'Primary agreement:', 'Pending reason:', 'Handoff:', 'Last R.:', 'Last Touched:', 'Service Restored:', 'Alert Cleared:', 'Customer:', 'Close code:', 'Cause code:', 'Close notes:', 'Root cause:'
+    ]
+    result_lines = []
+    for idx, line in enumerate(joined_lines):
+        result_lines.append(line)
+        for b in break_after:
+            if line.strip().startswith(b):
+                # Only add blank line if next line isn't already blank
+                if idx+1 >= len(joined_lines) or joined_lines[idx+1].strip():
+                    result_lines.append('')
+                break
+    return '\n'.join(result_lines)
+
+def clean_markup(text):
+    """Remove ServiceNow/PDF markup tags and convert HTML breaks to newlines."""
+    # Remove [code], [/code], <b>, </b>
+    text = re.sub(r'\[/?code\]', '', text)
+    text = re.sub(r'<b>|</b>', '', text)
+    # Convert <br> and <br /> to newlines
+    text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+    return text
+
 def redact_sensitive(text):
     """Redact sensitive information and track statistics"""
     redaction_stats = {
@@ -374,6 +427,7 @@ def redact_sensitive(text):
     
     return text, redaction_stats
 
+
 def extract_text_from_pdf(file_path, max_pages=None):
     """Extract text from PDF and apply redaction with statistics"""
     with pdfplumber.open(file_path) as pdf:
@@ -393,7 +447,11 @@ def extract_text_from_pdf(file_path, max_pages=None):
                 text_chunks = [partial_text]
         
         full_text = "\n".join(text_chunks)
-    
+
+    # Post-process to join wrapped lines before redaction
+    full_text = join_wrapped_lines(full_text)
+    # Clean up markup tags before redaction
+    full_text = clean_markup(full_text)
     redacted_text, redaction_stats = redact_sensitive(full_text)
     
     # Try to copy to clipboard silently (for local development convenience)
