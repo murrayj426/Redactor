@@ -1,3 +1,5 @@
+# Ignore cache directory
+cache/
 # Environment variables
 .env
 
