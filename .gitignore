@@ -49,3 +49,4 @@ reports/*.txt
 *.pdf
 *extracted*.txt
 test_*.txt
+flowchart TD.md
