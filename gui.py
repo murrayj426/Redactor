@@ -732,6 +732,9 @@ def run_single_audit(redacted_text, uploaded_file, ai_provider, api_key_input, a
                         redacted_text,
                         model=model_choice
                     )
+
+                    # Attempt structured summary extraction (JSON first then fallback handled internally)
+                    summary_dict = auditor.create_audit_summary(audit_result)
                     
                     # Store audit result only if not already stored or differs
                     if st.session_state.get('audit_result') != audit_result:
@@ -745,6 +748,31 @@ def run_single_audit(redacted_text, uploaded_file, ai_provider, api_key_input, a
                     
                     # Display audit results
                     st.subheader("📊 Audit Results")
+
+                    # If structured summary available show top-line metrics
+                    if summary_dict:
+                        cols = st.columns(5)
+                        with cols[0]:
+                            st.metric("PASS", summary_dict.get('pass_count', 0))
+                        with cols[1]:
+                            st.metric("FAIL", summary_dict.get('fail_count', 0))
+                        with cols[2]:
+                            st.metric("N/A", summary_dict.get('na_responses', 0))
+                        with cols[3]:
+                            comp = summary_dict.get('compliance_percentage')
+                            st.metric("Compliance %", f"{comp:.1f}%" if comp is not None else "-")
+                        with cols[4]:
+                            st.metric("Scoreable", summary_dict.get('applicable_questions', summary_dict.get('scoreable_questions', '-')))
+
+                        # Display raw JSON summary if used
+                        if summary_dict.get('json_summary_used'):
+                            with st.expander("Structured JSON Summary"):
+                                st.code(str({k: v for k, v in summary_dict.items() if k not in ('json_summary_used', 'compliance_percentage')}), language="json")
+                        else:
+                            st.caption("Parsed via fallback pattern matching (JSON summary not present in model output).")
+                    else:
+                        st.caption("Summary extraction unavailable.")
+
                     with st.expander("View Full Audit Report", expanded=True):
                         st.markdown(audit_result)
                     
