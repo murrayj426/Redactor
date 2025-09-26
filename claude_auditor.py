@@ -12,7 +12,7 @@ import anthropic
 # Import base auditor and optimization utilities
 from base_auditor import BaseAuditor
 from utils.error_handling import smart_error_handler, monitor_performance
-from utils.ai_utils import optimize_prompt_for_model
+from utils.ai_utils import optimize_prompt_for_model, TokenManager
 
 # Load environment variables
 load_dotenv()
@@ -28,12 +28,11 @@ class ClaudeAuditor(BaseAuditor):
     @monitor_performance
     def audit_ticket(self, redacted_text, model="claude-3-5-sonnet-20241022"):
         """Conduct audit using Claude 3.5 Sonnet's superior reasoning capabilities"""
-        
-        # Apply rate limiting
-        self.rate_limiter.wait_if_needed(model, 50)  # Claude's rate limit
-        
-        # Optimize prompt for token limits
+        token_manager = TokenManager()
         prompt = self.create_audit_prompt(redacted_text)
+        prompt_tokens = token_manager.count_tokens(prompt, model)
+        reserved_output = 220 * 13 + 300  # heuristic expected output size
+        self.rate_limiter.consume(model, prompt_tokens, reserved_output)
         optimization = optimize_prompt_for_model(prompt, model)
         
         if optimization['truncated']:
@@ -74,7 +73,11 @@ class ClaudeAuditor(BaseAuditor):
                     print(f"⚠️ Skipping non-TextBlock or missing 'text' attribute in block: {block}")
 
         if audit_results:
-            return "\n\n".join(audit_results)
+            full_text = "\n\n".join(audit_results)
+            parsed = self.parse_json_summary(full_text)
+            if parsed:
+                print(f"Parsed JSON summary: {parsed}")
+            return full_text
         else:
             raise ValueError("Unexpected response structure: No valid text blocks found")
 

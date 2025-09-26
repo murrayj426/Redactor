@@ -3,7 +3,9 @@ AI utilities for token management and rate limiting
 """
 import time
 import tiktoken
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Deque, Tuple
+from collections import deque
+import os
 
 class TokenManager:
     """Manage AI API tokens and rate limiting"""
@@ -79,30 +81,76 @@ class TokenManager:
         return 'gpt-4o-mini'  # Default fallback
 
 class RateLimiter:
-    """Handle rate limiting with exponential backoff"""
-    
+    """Token + request aware rate limiter (sliding 60s window)."""
+
     def __init__(self):
-        self.request_times = {}
-    
-    def wait_if_needed(self, model: str, requests_per_minute: int = None):
-        """Wait if necessary to respect rate limits"""
-        if model not in self.request_times:
-            self.request_times[model] = []
-        
+        # model -> deque[(timestamp, tokens)]
+        self.history: Dict[str, Deque[Tuple[float, int]]] = {}
+        self.token_manager = TokenManager()
+
+    def _limits_for(self, model: str) -> Tuple[int, int]:
+        rl = self.token_manager.rate_limits.get(model, {})
+        # Environment overrides allow tuning without code change
+        rpm = int(os.getenv(f"{model.upper().replace('-','_')}_RPM", rl.get('rpm', 10)))
+        tpm = int(os.getenv(f"{model.upper().replace('-','_')}_TPM", rl.get('tpm', 8000)))
+        return rpm, tpm
+
+    def consume(self, model: str, request_tokens: int, response_tokens_reserved: int = 0):
+        """Block until sending this request fits within RPM & TPM budgets.
+
+        request_tokens: tokens in prompt
+        response_tokens_reserved: conservative expected output tokens (buffer)
+        """
+        if model not in self.history:
+            self.history[model] = deque()
+        window = self.history[model]
+        rpm_limit, tpm_limit = self._limits_for(model)
+
         now = time.time()
-        minute_ago = now - 60
-        
-        # Clean old requests
-        self.request_times[model] = [t for t in self.request_times[model] if t > minute_ago]
-        
-        # Check if we need to wait
-        rpm_limit = requests_per_minute or 10  # Conservative default
-        if len(self.request_times[model]) >= rpm_limit:
-            sleep_time = 60 - (now - self.request_times[model][0])
-            if sleep_time > 0:
-                time.sleep(sleep_time)
-        
-        self.request_times[model].append(now)
+        cutoff = now - 60
+        while window and window[0][0] < cutoff:
+            window.popleft()
+
+        total_needed = request_tokens + response_tokens_reserved
+        if total_needed > tpm_limit:
+            print(f"⚠️ Request size {total_needed} tokens exceeds TPM limit {tpm_limit} for {model}. Consider further compression.")
+
+        def usage():
+            return len(window), sum(t for _, t in window)
+
+        # Wait loop until both RPM & TPM satisfied
+        while True:
+            req_count, tok_sum = usage()
+            over_rpm = req_count >= rpm_limit
+            over_tpm = (tok_sum + total_needed) > tpm_limit
+            if not over_rpm and not over_tpm:
+                break
+            oldest_ts, _ = window[0]
+            sleep_for = max(0.01, 60 - (time.time() - oldest_ts))
+            time.sleep(min(sleep_for, 5))
+            now = time.time()
+            cutoff = now - 60
+            while window and window[0][0] < cutoff:
+                window.popleft()
+
+        window.append((time.time(), total_needed))
+
+    def estimate_budget(self, model: str) -> Dict[str, Any]:
+        rpm_limit, tpm_limit = self._limits_for(model)
+        if model not in self.history:
+            return {'rpm_used': 0, 'tpm_used': 0, 'rpm_limit': rpm_limit, 'tpm_limit': tpm_limit, 'tpm_remaining_est': tpm_limit}
+        window = self.history[model]
+        cutoff = time.time() - 60
+        while window and window[0][0] < cutoff:
+            window.popleft()
+        tok_sum = sum(t for _, t in window)
+        return {
+            'rpm_used': len(window),
+            'tpm_used': tok_sum,
+            'rpm_limit': rpm_limit,
+            'tpm_limit': tpm_limit,
+            'tpm_remaining_est': max(tpm_limit - tok_sum, 0)
+        }
 
 def optimize_prompt_for_model(prompt: str, model: str) -> Dict[str, Any]:
     """Optimize prompt based on model capabilities"""

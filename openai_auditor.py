@@ -7,7 +7,7 @@ from datetime import datetime
 # Import base auditor and optimization utilities
 from base_auditor import BaseAuditor
 from utils.error_handling import smart_error_handler, monitor_performance
-from utils.ai_utils import optimize_prompt_for_model
+from utils.ai_utils import optimize_prompt_for_model, TokenManager
 
 # Load environment variables
 load_dotenv()
@@ -21,23 +21,21 @@ class TicketAuditor(BaseAuditor):
     @monitor_performance
     def audit_ticket(self, redacted_text, model="gpt-4o-mini"):
         """Send redacted text to OpenAI for auditing using Network Team standards"""
-        
-        # Apply rate limiting
-        model_rates = {'gpt-4': 10, 'gpt-4o-mini': 500, 'gpt-3.5-turbo': 3500}
-        rpm_limit = model_rates.get(model, 10)
-        self.rate_limiter.wait_if_needed(model, rpm_limit)
-        
-        # Optimize prompt for token limits
+        token_manager = TokenManager()
         prompt = self.create_audit_prompt(redacted_text)
+        prompt_tokens = token_manager.count_tokens(prompt, model)
+        reserved_output = 1600  # expected response size heuristic for audit answers
+        # Consume rate limits before making request
+        self.rate_limiter.consume(model, prompt_tokens, reserved_output)
         optimization = optimize_prompt_for_model(prompt, model)
-        
+
         if optimization['truncated']:
             print(f"⚠️ Prompt truncated for {model}: {optimization['reason']}")
             prompt = optimization['optimized_prompt']
         elif optimization['model_suggestion'] != model:
             print(f"💡 Suggesting {optimization['model_suggestion']} instead of {model} for better performance")
             model = optimization['model_suggestion']
-        
+
         response = self.client.chat.completions.create(
             model=model,
             messages=[
@@ -47,7 +45,7 @@ class TicketAuditor(BaseAuditor):
             max_tokens=1500,
             temperature=0.3
         )
-        
+
         # Log API response for debugging
         print("OpenAI API Full Response:", response)
         print("DEBUG: audit_ticket method called with prompt:", prompt)
@@ -62,7 +60,12 @@ class TicketAuditor(BaseAuditor):
                     print(f"⚠️ Skipping choice without 'content' attribute: {choice}")
 
         if audit_results:
-            return "\n\n".join(audit_results)
+            full_text = "\n\n".join(audit_results)
+            # Attempt JSON summary parse (side-effect logging already in base)
+            parsed = self.parse_json_summary(full_text)
+            if parsed:
+                print(f"Parsed JSON summary: {parsed}")
+            return full_text
         else:
             raise ValueError("Unexpected response structure: No valid content found")
     
