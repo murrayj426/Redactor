@@ -6,7 +6,7 @@ import os
 import time
 import tempfile
 import io
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
 # Import optimization utilities
@@ -733,6 +733,14 @@ def run_single_audit(redacted_text, uploaded_file, ai_provider, api_key_input, a
                         model=model_choice
                     )
 
+                    # Preserve original for file download, but create display copy without raw JSON summary line
+                    def strip_json_line(full_text: str) -> str:
+                        lines = full_text.rstrip().splitlines()
+                        if lines and lines[-1].startswith('JSON_SUMMARY:'):
+                            return '\n'.join(lines[:-1])
+                        return full_text
+                    audit_result_display = strip_json_line(audit_result)
+
                     # Attempt structured summary extraction (JSON first then fallback handled internally)
                     summary_dict = auditor.create_audit_summary(audit_result)
                     
@@ -751,30 +759,61 @@ def run_single_audit(redacted_text, uploaded_file, ai_provider, api_key_input, a
 
                     # If structured summary available show top-line metrics
                     if summary_dict:
-                        cols = st.columns(5)
+                        pass_count = summary_dict.get('pass_count', 0)
+                        fail_count = summary_dict.get('fail_count', 0)
+                        na_count = summary_dict.get('na_responses', 0)
+                        applicable = summary_dict.get('applicable_questions', summary_dict.get('scoreable_questions', 0))
+                        comp = summary_dict.get('compliance_percentage')
+                        answered = pass_count + fail_count
+                        cols = st.columns(6)
                         with cols[0]:
-                            st.metric("PASS", summary_dict.get('pass_count', 0))
+                            st.metric("PASS", pass_count)
                         with cols[1]:
-                            st.metric("FAIL", summary_dict.get('fail_count', 0))
+                            st.metric("FAIL", fail_count)
                         with cols[2]:
-                            st.metric("N/A", summary_dict.get('na_responses', 0))
+                            st.metric("N/A", na_count)
                         with cols[3]:
-                            comp = summary_dict.get('compliance_percentage')
-                            st.metric("Compliance %", f"{comp:.1f}%" if comp is not None else "-")
+                            st.metric("Answered", answered)
                         with cols[4]:
-                            st.metric("Scoreable", summary_dict.get('applicable_questions', summary_dict.get('scoreable_questions', '-')))
+                            st.metric("Scoreable", f"{answered}/{applicable}" if applicable else answered)
+                        with cols[5]:
+                            st.metric("Compliance %", f"{comp:.1f}%" if comp is not None else "-")
 
-                        # Display raw JSON summary if used
+                        # Failed questions quick list (only if JSON summary used)
+                        failed_questions: List[str] = []
                         if summary_dict.get('json_summary_used'):
-                            with st.expander("Structured JSON Summary"):
-                                st.code(str({k: v for k, v in summary_dict.items() if k not in ('json_summary_used', 'compliance_percentage')}), language="json")
+                            # Map qN -> FAIL
+                            # We know keys are like q2..q15 skipping q13 & q16
+                            for k, v in summary_dict.items():
+                                if k.startswith('q') and isinstance(v, str) and v.upper() == 'FAIL':
+                                    failed_questions.append(k.upper())
+                        if failed_questions:
+                            with st.expander("⚠️ Failed Questions"):
+                                st.write(', '.join(sorted(failed_questions)))
+                        elif fail_count == 0:
+                            st.success("All scoreable questions passed.")
+
+                        # Display structured summary tools
+                        if summary_dict.get('json_summary_used'):
+                            raw_json = {k: v for k, v in summary_dict.items() if k.startswith('q')}
+                            json_str = st.text_area("Structured JSON Summary", value=str(raw_json), height=120)
+                            colx, coly = st.columns(2)
+                            with colx:
+                                st.download_button(
+                                    "📥 Download JSON Summary",
+                                    data=str(raw_json),
+                                    file_name=f"audit_summary_{uploaded_file.name}.json",
+                                    mime="application/json"
+                                )
+                            with coly:
+                                st.code(f"Failures: {[q for q in sorted(raw_json.keys()) if raw_json[q]=='FAIL']}")
                         else:
                             st.caption("Parsed via fallback pattern matching (JSON summary not present in model output).")
                     else:
                         st.caption("Summary extraction unavailable.")
 
                     with st.expander("View Full Audit Report", expanded=True):
-                        st.markdown(audit_result)
+                        st.markdown(audit_result_display)
                     
                     # Download button for audit report  
                     st.download_button(
@@ -783,6 +822,37 @@ def run_single_audit(redacted_text, uploaded_file, ai_provider, api_key_input, a
                         file_name=f"{provider_prefix}_audit_report_{uploaded_file.name}.txt",
                         mime="text/plain"
                     )
+
+                    # Persist summary to CSV (append) for historical tracking
+                    try:
+                        if summary_dict:
+                            import csv, datetime
+                            history_fields = [
+                                'timestamp','provider','model','file','pass','fail','na','answered','applicable','compliance_pct','fails'
+                            ]
+                            row = {
+                                'timestamp': datetime.datetime.utcnow().isoformat(),
+                                'provider': provider_prefix,
+                                'model': model_choice,
+                                'file': uploaded_file.name,
+                                'pass': pass_count if summary_dict else '',
+                                'fail': fail_count if summary_dict else '',
+                                'na': na_count if summary_dict else '',
+                                'answered': answered if summary_dict else '',
+                                'applicable': applicable if summary_dict else '',
+                                'compliance_pct': f"{comp:.2f}" if comp is not None else '',
+                                'fails': '|'.join(sorted(failed_questions)) if summary_dict and failed_questions else ''
+                            }
+                            os.makedirs('reports', exist_ok=True)
+                            history_path = 'reports/audit_history.csv'
+                            file_exists = os.path.exists(history_path)
+                            with open(history_path, 'a', newline='') as csvfile:
+                                writer = csv.DictWriter(csvfile, fieldnames=history_fields)
+                                if not file_exists:
+                                    writer.writeheader()
+                                writer.writerow(row)
+                    except Exception as e:
+                        st.caption(f"(Could not persist history: {e})")
                     
                     
                 except Exception as e:

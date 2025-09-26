@@ -1,5 +1,3 @@
-{{PROCEDURES_SNIPPET}}
-
 **NETWORK TEAM INCIDENT AUDIT**
 
 **COMPLIANCE STANDARD**: All questions are evaluated against Network Team Incident Management Documentation.
