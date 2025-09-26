@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from utils.config import get_config, validate_config
 from utils.error_handling import setup_logging, get_performance_report
 
+
 # Import batch processor
 try:
     from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -74,6 +75,8 @@ with st.sidebar:
             st.markdown("• 🔧 Bottleneck identification")
 
 st.markdown("---")
+
+
 st.header("🤖 Configuration")
 
 # Check if API keys are available from .env or Streamlit secrets
@@ -730,6 +733,10 @@ def run_single_audit(redacted_text, uploaded_file, ai_provider, api_key_input, a
                         model=model_choice
                     )
                     
+                    # Store audit result only if not already stored or differs
+                    if st.session_state.get('audit_result') != audit_result:
+                        st.session_state.audit_result = audit_result
+                    
                     # Save audit report with provider prefix
                     provider_prefix = "claude" if "Claude" in ai_provider else "openai"
                     report_file = auditor.save_audit_report(audit_result, f"{provider_prefix}_network_team_audit")
@@ -748,6 +755,7 @@ def run_single_audit(redacted_text, uploaded_file, ai_provider, api_key_input, a
                         file_name=f"{provider_prefix}_audit_report_{uploaded_file.name}.txt",
                         mime="text/plain"
                     )
+                    
                     
                 except Exception as e:
                     st.error(f"❌ Audit failed: {str(e)}")

@@ -178,24 +178,41 @@ When engineers don't meet standards, they get:
 - **Procedure References**: Learning opportunities for engineers
 - **Timestamped Files**: Complete audit trail
 
-## 🌐 **Deployment Options**
+## 🌐 **Deployment Options (Docker Removed)**
 
-### Local Development
+You asked to simplify back to plain local + GitHub usage (no Docker). The project now assumes a direct Python environment.
+
+### Local Development (Recommended)
 ```bash
-streamlit run gui.py  # http://localhost:8502
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run gui.py  # http://localhost:8501
 ```
 
-### Streamlit Cloud (Recommended)
-- Connect your GitHub repository
-- Automatic deployment on code changes
-- Free hosting for team access
-- Built-in SSL and domain
+Or use the convenience script:
+```bash
+./run_redactor.sh
+```
 
-### Enterprise Deployment
-- Docker containerization ready
-- Environment variable configuration
-- Scalable for multiple teams
-- Audit logging capabilities
+### Streamlit Community Cloud
+1. Push repo to GitHub
+2. Create new Streamlit Cloud app pointing to `gui.py`
+3. Add secrets / environment (ANTHROPIC_API_KEY, OPENAI_API_KEY) via the Streamlit Cloud secrets UI
+
+### (Optional) Re‑adding Docker Later
+If you ever need containerization again, you can restore the previous `Dockerfile` and `compose.yaml` from git history (search the commit before Docker removal) or create a new minimal one:
+```Dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 8501
+CMD ["streamlit", "run", "gui.py"]
+```
+
+For most individual/team use cases, running locally or on Streamlit Cloud is sufficient and simpler.
 
 ## 🛡️ **Security & Privacy**
 

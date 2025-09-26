@@ -53,6 +53,8 @@ class BaseAuditor(ABC):
 {procedures[:2000]}...
 
 **CRITICAL INSTRUCTIONS**:
+- **COMPLETE ALL 16 QUESTIONS IN ONE RESPONSE** - Do not ask for permission to continue or pause mid-analysis
+- **Answer every question from 1-16** - This is a comprehensive audit that must be completed fully
 - Question 1: Simply identify and display the INC number (not a compliance check)
 - Only use N/A for questions 12 and 15 when truly not applicable
 - Questions 2-12, 14 should ALWAYS be answered PASS or FAIL
@@ -61,6 +63,7 @@ class BaseAuditor(ABC):
 - N/A should be rare - most questions apply to every incident
 - **Accept common abbreviations**: "Client H." = "Client Hold", "CAR" = "Client Action Required", etc.
 - **Be reasonable with formats**: Minor variations in wording/format should not automatically fail compliance
+- **DO NOT PAUSE OR ASK FOR CONFIRMATION** - Complete the entire 16-question audit analysis in your response
 
 **FORMATTING REQUIREMENTS**:
 - Use proper spacing and line breaks for readability

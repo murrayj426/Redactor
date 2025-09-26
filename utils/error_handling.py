@@ -185,12 +185,23 @@ def setup_logging(level: str = "INFO", log_file: str = None):
     # Setup file handler if specified
     handlers = [console_handler]
     if log_file:
-        # Ensure the directory exists
-        import os
-        os.makedirs(os.path.dirname(log_file), exist_ok=True)
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(formatter)
-        handlers.append(file_handler)
+        try:
+            # Ensure the directory exists
+            import os
+            log_dir = os.path.dirname(log_file)
+            if log_dir:
+                os.makedirs(log_dir, exist_ok=True)
+            
+            # Test write permissions by trying to create the file handler
+            file_handler = logging.FileHandler(log_file)
+            file_handler.setFormatter(formatter)
+            handlers.append(file_handler)
+            
+        except (OSError, PermissionError) as e:
+            # If we can't write to the log file, fall back to console only
+            console_handler.stream.write(f"WARNING: Cannot create log file '{log_file}': {e}\n")
+            console_handler.stream.write("Falling back to console logging only.\n")
+            console_handler.stream.flush()
     
     # Configure root logger
     logging.basicConfig(
